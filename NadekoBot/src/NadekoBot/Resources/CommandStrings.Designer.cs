@@ -7683,6 +7683,24 @@ namespace NadekoBot.Resources {
         }
         
         /// <summary>
+        ///    Looks up a localized string similar to tags.
+        /// </summary>
+        public static string tags_cmd {
+            get {
+                return ResourceManager.GetString("tags_cmd", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to `{0}tags tag1 tag2 tag3 ...`.
+        /// </summary>
+        public static string tags_usage {
+            get {
+                return ResourceManager.GetString("tags_usage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///    Looks up a localized string similar to take.
         /// </summary>
         public static string take_cmd {

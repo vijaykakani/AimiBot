@@ -35,7 +35,7 @@ namespace NadekoBot.Modules.Settings
         {
             string fullQueryLink = royalroadl_domain + "fiction/" + stody_id;
             var embed = new EmbedBuilder();
-            string error_message = "";
+            StringBuilder error_message = new StringBuilder();
 
             AngleSharp.Dom.IDocument document = null;
             try
@@ -45,9 +45,9 @@ namespace NadekoBot.Modules.Settings
             }
             catch (Exception ex)
             {
-                error_message += $"Message: {ex.Message}\nSource: searching the site\n";
+                error_message.AppendLine($"Message: {ex.Message}\nSource: searching the site");
             }
-            
+
             var existElem = document.QuerySelector("div.col-md-12.page-404");
             if (existElem != null)
             {
@@ -64,9 +64,9 @@ namespace NadekoBot.Modules.Settings
                 }
                 catch (Exception ex)
                 {
-                    error_message += $"Message: {ex.Message}\nSource: title\n";
+                    error_message.AppendLine($"Message: {ex.Message}\nSource: title");
                 }
-                
+
                 //  author
                 var authorElem = document.QuerySelector("h4.font-white");
                 string authorText = "";
@@ -76,7 +76,7 @@ namespace NadekoBot.Modules.Settings
                 }
                 catch (Exception ex)
                 {
-                    error_message += $"Message: {ex.Message}\nSource: author\n";
+                    error_message.AppendLine($"Message: {ex.Message}\nSource: author");
                 }
 
                 //  description/synopsis
@@ -90,9 +90,9 @@ namespace NadekoBot.Modules.Settings
                 }
                 catch (Exception ex)
                 {
-                    error_message += $"Message: {ex.Message}\nSource: description\n";
+                    error_message.AppendLine($"Message: {ex.Message}\nSource: description");
                 }
-                
+
                 //  cover art
                 var imageElem = document.QuerySelector("img.img-offset");
                 string imageUrl = "";
@@ -102,7 +102,7 @@ namespace NadekoBot.Modules.Settings
                 }
                 catch (Exception ex)
                 {
-                    error_message += $"Message: {ex.Message}\nSource: image\n";
+                    error_message.AppendLine($"Message: {ex.Message}\nSource: image");
                 }
 
                 //  tags
@@ -115,7 +115,7 @@ namespace NadekoBot.Modules.Settings
                 }
                 catch (Exception ex)
                 {
-                    error_message += $"Message: {ex.Message}\nSource: tags\n";
+                    error_message.AppendLine($"Message: {ex.Message}\nSource: tags");
                 }
 
                 /*
@@ -127,7 +127,7 @@ namespace NadekoBot.Modules.Settings
                 }
                 await Context.Channel.SendConfirmAsync($"{sb}").ConfigureAwait(false);
                 */
-                
+
                 embed.WithOkColor().WithTitle(titleText);
 
                 string title = $"**{titleText}** {authorText}\n\n";
@@ -168,11 +168,11 @@ namespace NadekoBot.Modules.Settings
             }
             catch (Exception ex)
             {
-                error_message += $"Message: {ex.Message}\nSource: sending story message\n";
+                error_message.AppendLine($"Message: {ex.Message}\nSource: sending story message");
             }
 
-            if (!string.IsNullOrWhiteSpace(error_message.Trim()))
-                await Context.Channel.EmbedAsync(new EmbedBuilder().WithErrorColor().WithTitle("Error").WithDescription(error_message)).ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(error_message.ToString().Trim()))
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithErrorColor().WithTitle("Error").WithDescription(error_message.ToString())).ConfigureAwait(false);
         }
 
         [NadekoCommand, Usage, Description, Aliases]
@@ -182,9 +182,9 @@ namespace NadekoBot.Modules.Settings
             var channel = (ITextChannel)Context.Channel;
 
             Color msg_color = new Color();
-            string debug_msg = "";
-            string display_msg = "";
-            string error_message = "";
+            StringBuilder debug_msg = new StringBuilder();
+            StringBuilder display_msg = new StringBuilder();
+            StringBuilder error_message = new StringBuilder();
             int page_no = 1;
             int separation = 0;
 
@@ -197,6 +197,8 @@ namespace NadekoBot.Modules.Settings
                     {
                         if (!int.TryParse(name, out page_no))
                             page_no = 1;
+                        else
+                            name = "";
                     }
                     else
                     {
@@ -212,12 +214,12 @@ namespace NadekoBot.Modules.Settings
                 }
                 catch (Exception ex)
                 {
-                    error_message += $"Message: {ex.Message}\nSource: Choosing Page Numbers\n";
+                    error_message.AppendLine($"Message: {ex.Message}\nSource: Choosing Page Numbers\n");
                 }
             }
 
             string queryPath = $"page={page_no}";
-            if (!string.IsNullOrWhiteSpace(name) && (separation != -1))
+            if (!string.IsNullOrWhiteSpace(name))
                 queryPath += $"&keyword={Uri.EscapeDataString(name)}";
 
             string fullQueryLink = royalroadl_domain + $"fictions/search?{queryPath}";
@@ -237,9 +239,9 @@ namespace NadekoBot.Modules.Settings
                 if (stories_elem.Count() == 0)
                 {
                     if (!string.IsNullOrWhiteSpace(name))
-                        display_msg = $"{stories_elem.Count()} searches found for \"{name}\"";
+                        display_msg.AppendLine($"{stories_elem.Count()} searches found for \"{name}\"");
                     else
-                        display_msg = $"{stories_elem.Count()} searches found";
+                        display_msg.AppendLine($"{stories_elem.Count()} searches found");
                     msg_color = NadekoBot.ErrorColor;
                 }
                 else
@@ -287,17 +289,12 @@ namespace NadekoBot.Modules.Settings
                     }
 
                     msg_color = NadekoBot.OkColor;
-                    display_msg = String.Join("\n", stories_list.ToArray()) + "\n\n";
+                    display_msg.AppendLine(String.Join("\n", stories_list.ToArray()) + "\n");
 
                     var pagination_elem = document.QuerySelectorAll("ul.pagination > li");
-                    if (pagination_elem.Count() == 0)
+                    if (pagination_elem.Count() > 0)
                     {
-                        display_msg += $"**Current Page:** `{page_no}`\n";
-                        display_msg += $"**Total Pages:** `{page_no}`\n";
-                    }
-                    else
-                    {
-                        display_msg += $"**Current Page:** `{page_no}`\n";
+                        display_msg.AppendLine($"**Current Page:** `{page_no}`");
 
                         //debug_msg += $"Pagination: {pagination_elem.Count()}\n";
 
@@ -320,30 +317,30 @@ namespace NadekoBot.Modules.Settings
                                 {
                                     string total_pages = page_link_str.Substring(page_link_str.IndexOf("=") + 1);
 
-                                    display_msg += $"**Total Pages:** `{total_pages}`\n";
+                                    display_msg.AppendLine($"**Total Pages:** `{total_pages}`\n");
                                     break;
                                 }
                             }
                         }
                         catch (Exception ex)
                         {
-                            error_message += $"Message: {ex.Message}\nSource: Pagination\n";
+                            error_message.AppendLine($"Message: {ex.Message}\nSource: Pagination");
                         }
                     }
                 }
 
-                await Context.Channel.EmbedAsync(new EmbedBuilder().WithColor(msg_color).WithTitle("Royal Road L: Stories List").WithDescription(display_msg).WithImageUrl(rrl_logoUrl)).ConfigureAwait(false);
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithColor(msg_color).WithTitle("Royal Road L: Stories List").WithDescription(display_msg.ToString()).WithImageUrl(rrl_logoUrl)).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                error_message += $"Message: {ex.Message}\nSource: Processing the execution\n";
+                error_message.AppendLine($"Message: {ex.Message}\nSource: Processing the execution");
             }
 
-            if (!string.IsNullOrWhiteSpace(debug_msg))
+            if (!string.IsNullOrWhiteSpace(debug_msg.ToString()))
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithErrorColor().WithTitle("Debug Report").WithDescription($"{debug_msg}\n")).ConfigureAwait(false);
 
-            if (!string.IsNullOrWhiteSpace(error_message.Trim()))
-                await Context.Channel.EmbedAsync(new EmbedBuilder().WithErrorColor().WithTitle("Error").WithDescription(error_message)).ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(error_message.ToString().Trim()))
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithErrorColor().WithTitle("Error").WithDescription(error_message.ToString())).ConfigureAwait(false);
         }
 
         [NadekoCommand, Usage, Description, Aliases]
@@ -431,6 +428,248 @@ namespace NadekoBot.Modules.Settings
                 string message = $"Message: {ex.Message}\nSource: {ex.HelpLink}";
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithErrorColor().WithTitle("Error").WithDescription(message)).ConfigureAwait(false);
             }
+        }
+
+        [NadekoCommand, Usage, Description, Aliases]
+        [RequireContext(ContextType.Guild)]
+        public async Task Tags([Remainder] string name = null)
+        {
+            var channel = (ITextChannel)Context.Channel;
+
+            Color msg_color = new Color();
+            StringBuilder debug_msg = new StringBuilder();
+            StringBuilder display_msg = new StringBuilder();
+            StringBuilder error_message = new StringBuilder();
+            int page_no = 1;
+            int separation = 0;
+            List<string> tags_list = new List<string>();
+
+            string fullQueryLink = royalroadl_domain + "fictions/search";
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                //debug_msg.AppendLine("Test");
+
+                var config = Configuration.Default.WithDefaultLoader();
+                var document = await BrowsingContext.New(config).OpenAsync(fullQueryLink);
+
+                var rrl_logo_rlm = document.QuerySelector("img.logo-default");
+                var rrl_logoUrl = ((IHtmlImageElement)rrl_logo_rlm).Source;
+
+                try
+                {
+                    //var tags_elems = document.QuerySelectorAll("span.tag-label");
+                    var tags_elems = document.QuerySelectorAll("button.btn.default.search-tag");
+                    int max_len = 0;
+                    //debug_msg.AppendLine($"{tags_elems.Count().ToString()}");
+                    foreach (var tag in tags_elems)
+                    {
+                        /*
+                        if (!string.IsNullOrWhiteSpace(tag.Text()))
+                            tags_list.Add(tag.Text().Trim());*/
+                        
+                        string tag_code = tag.GetAttribute("data-tag");
+                        string tag_name = tag.GetAttribute("data-label");
+
+                        if (tag_name.Length > max_len)
+                            max_len = tag_name.Length + 1;
+
+                        /*debug_msg.AppendLine($"tag_code: {tag_code}");
+                        debug_msg.AppendLine($"tag_name: {tag_name}");
+
+                        await Context.Channel.EmbedAsync(new EmbedBuilder().WithErrorColor().WithTitle("Debug Report").WithDescription($"{debug_msg.ToString()}")).ConfigureAwait(false);
+                        debug_msg.Clear();
+                        break;*/
+                    }
+
+                    foreach (var tag in tags_elems)
+                    {
+                        string tag_code = tag.GetAttribute("data-tag");
+                        string tag_name = tag.GetAttribute("data-label");
+                        for (int i = tag_name.Length; i < max_len; i++)
+                            tag_name += " ";
+
+                        string tag_line = tag_name + "(" + tag_code + ")";
+                        tags_list.Add(tag_line);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    error_message.AppendLine($"Message: {ex.Message}\nSource: Doing Tags List");
+                }
+
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithOkColor().WithTitle($"Royal Road L: Tags").WithDescription(String.Join("\n", tags_list.ToArray())).WithImageUrl(rrl_logoUrl)).ConfigureAwait(false);
+            }
+            else
+            {
+                try
+                {
+                    separation = name.IndexOf(" ");
+                    if (separation == -1)
+                    {
+                        if (!int.TryParse(name, out page_no))
+                            page_no = 1;
+                        else
+                            name = "";
+                    }
+                    else
+                    {
+                        string page_text = name.Substring(0, separation);
+                        if (int.TryParse(page_text, out page_no))
+                        {
+                            int new_start = separation + 1;
+                            if (new_start < name.Length)
+                                name = name.Substring(new_start);
+                        }
+                        else
+                            page_no = 1;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    error_message.AppendLine($"Message: {ex.Message}\nSource: Choosing Page Numbers");
+                }
+
+                //debug_msg.AppendLine($"param: {name}");
+
+                string queryPath = $"page={page_no}";
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    tags_list = name.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).ToList();
+                    foreach (var tag in tags_list)
+                    {
+                        if (!string.IsNullOrWhiteSpace(tag.Trim()))
+                        {
+                            string path = "&tagsAdd=" + Uri.EscapeDataString(tag.Trim());
+                            queryPath += path;
+                            //debug_msg.AppendLine(path);
+                        }
+                    }
+                }
+
+                try
+                {
+                    fullQueryLink += $"?{queryPath}";
+                    //debug_msg.AppendLine(fullQueryLink);
+
+                    var config = Configuration.Default.WithDefaultLoader();
+                    var document = await BrowsingContext.New(config).OpenAsync(fullQueryLink);
+
+                    var rrl_logo_rlm = document.QuerySelector("img.logo-default");
+                    var rrl_logoUrl = ((IHtmlImageElement)rrl_logo_rlm).Source;
+
+                    var stories_elem = document.QuerySelectorAll("li.search-item.clearfix > div.row");
+                    if (stories_elem.Count() == 0)
+                    {
+                        if (!string.IsNullOrWhiteSpace(name))
+                            display_msg.AppendLine($"{stories_elem.Count()} searches found for \"{name}\"");
+                        else
+                            display_msg.AppendLine($"{stories_elem.Count()} searches found");
+                        msg_color = NadekoBot.ErrorColor;
+                    }
+                    else
+                    {
+                        List<string> stories_list = new List<string>();
+
+                        //debug_msg += $"Stories Count: {stories_elem.Count()}\n";
+                        //debug_msg += $"Page Number: {page_no}\n";
+
+                        foreach (var item_a in stories_elem)
+                        {
+                            var parser = new HtmlParser();
+                            var story_doc = parser.Parse(item_a.InnerHtml);
+
+                            var story_link_elm = story_doc.QuerySelector("h2.margin-bottom-10 > a");
+                            IHtmlAnchorElement story_elm = (IHtmlAnchorElement)story_link_elm;
+
+                            string story_url = story_elm.Href.ToString().Substring(9);
+                            string story_link = royalroadl_domain + story_url;
+                            string story_title = story_elm.Text();
+                            int story_id = int.Parse(story_url.Substring(story_url.IndexOf("/") + 1));
+                            //debug_msg += $"[{story_title}]({story_link}) ({story_id})\n
+
+                            var author_text_elm = story_doc.QuerySelector("span.pull-right.author.small");
+                            IHtmlSpanElement author_elm = (IHtmlSpanElement)author_text_elm;
+                            string author_text = Regex.Replace(author_elm.InnerHtml, "<.*?>", string.Empty).Trim();
+                            //debug_msg += $"{author_text}\n";
+
+                            var pages_text_elm = story_doc.QuerySelector("span.page-count.small.uppercase.bold.font-blue-dark");
+                            IHtmlSpanElement pages_elm = (IHtmlSpanElement)pages_text_elm;
+                            string pages_text = Regex.Replace(pages_elm.InnerHtml, "<.*?>", string.Empty).Trim();
+
+                            stories_list.Add($"[{story_title}]({story_link}) ({story_id}): {pages_text} {author_text}");
+
+                            /*
+                            foreach (IHtmlAnchorElement menuLink in story_link_elm)
+                            {
+                                string story_url = menuLink.Href.ToString().Substring(9);
+                                string link  = royalroadl_domain + story_url;
+                                string title = menuLink.Text();
+                                int story_id = int.Parse(story_url.Substring(story_url.IndexOf("/") + 1));
+                                debug_msg += $"[{title}]({link}) ({story_id})\n";
+                            }
+                            */
+                        }
+
+                        msg_color = NadekoBot.OkColor;
+                        display_msg.AppendLine(String.Join("\n", stories_list.ToArray()) + "\n");
+
+                        var pagination_elem = document.QuerySelectorAll("ul.pagination > li");
+                        if (pagination_elem.Count() > 0)
+                        {
+                            display_msg.AppendLine($"**Current Page:** `{page_no}`\n");
+
+                            //debug_msg += $"Pagination: {pagination_elem.Count()}\n";
+
+                            try
+                            {
+                                foreach (var item_b in pagination_elem)
+                                {
+                                    var parser = new HtmlParser();
+                                    var page_elem = parser.Parse(item_b.InnerHtml);
+
+                                    var page_link_elm = page_elem.QuerySelector("a");
+                                    IHtmlAnchorElement page_link = (IHtmlAnchorElement)page_link_elm;
+
+                                    string page_link_str = page_link.Href.ToString();
+                                    string page_link_txt = page_link.Text();
+
+                                    //debug_msg += page_link_txt + "\n";
+
+                                    if (page_link_txt == "Last ›")
+                                    {
+                                        int start_point = page_link_str.IndexOf("=") + 1;
+                                        int end_point = page_link_str.IndexOf("&tagsAdd=");
+                                        string total_pages = page_link_str.Substring(start_point, end_point - start_point);
+
+                                        display_msg.AppendLine($"**Total Pages:** `{total_pages}`\n");
+                                        break;
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                error_message.AppendLine($"Message: {ex.Message}\nSource: Pagination\n");
+                            }
+                        }
+
+                        if (tags_list.Count() > 0)
+                            display_msg.AppendLine($"**Searched Tags:** `{String.Join(", ", tags_list.ToArray())}`");
+                    }
+
+                    await Context.Channel.EmbedAsync(new EmbedBuilder().WithColor(msg_color).WithTitle("Royal Road L: Stories List").WithDescription(display_msg.ToString()).WithImageUrl(rrl_logoUrl)).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    error_message.AppendLine($"Message: {ex.Message}\nSource: Processing the execution\n");
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(debug_msg.ToString()))
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithErrorColor().WithTitle("Debug Report").WithDescription($"{debug_msg.ToString()}")).ConfigureAwait(false);
+
+            if (!string.IsNullOrWhiteSpace(error_message.ToString().Trim()))
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithErrorColor().WithTitle("Error").WithDescription(error_message.ToString())).ConfigureAwait(false);
         }
     }
 }
