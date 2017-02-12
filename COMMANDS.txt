@@ -1,8 +1,24 @@
 ==============================
-======= Custom Commands ======
+======== Description =========
 ==============================
 
+There are already pre-existing commands from NadekoBot that you can find in the link below.
+https://nadekobot.readthedocs.io/en/latest/Commands%20List/
 
+To show the list of the custom commands added to the bot, use:
+-cmds rrl
+-cmds settings
+
+==============================
+========== Settings ==========
+==============================
+
+.currencygenerationchance <number> or .cgset <number>         # Generates the chance if which a flower currency is spawned.
+.hangmancurrencyrewardall <number> or .hcrset <number>        # Rewards the amount to player that guessed the word correctly.
+.hangmancurrencyrewardletter <amount> or .hclset <amount>     # Rewards the amount to player for guessing the right letter.
+.typestartcurrencyreward <amount> or .tsrset <amount>         # Rewards the amount to player and slwoly depletes it until the last the remaining people completes
+.triviacurrencyreward <amount> or .tcrset <amount>            # Rewards the amount to people. Disabled by default.
+.triviacurrencyrewardmultiplier <number> or .tcrmset <number> # Multiplies the reward flower currency to players per each point they scored.
 
 ==============================
 ======== RRL Commands ========
@@ -21,7 +37,3 @@ Examples:
 =search 1
 =search rise of an emperor
 =search 1 rise of an emperor
-
-==============================
-======== RRL Commands ========
-==============================
