@@ -1,0 +1,27 @@
+==============================
+======= Custom Commands ======
+==============================
+
+
+
+==============================
+======== RRL Commands ========
+==============================
+
+=story <story id>                     # This is the story id that each story has in Royal Road L. Link it with this for easiness.
+=author <name>                        # Lists the stories written by that author.
+
+=search                               # By default shows the page 1 of top ranking stories
+=search <page number>                 # Shows the top ranking stories listed on that page
+=search <search term>                 # Shows the list of stories matching our search
+=search <page number> <search term>   # Shows the list of stories matching our search on the specified page
+
+Examples:
+=search
+=search 1
+=search rise of an emperor
+=search 1 rise of an emperor
+
+==============================
+======== RRL Commands ========
+==============================

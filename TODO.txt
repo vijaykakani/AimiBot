@@ -1,0 +1,10 @@
+=tags
+=stats
+=latest
+=top
+=new
+
+-stare
+-nod
+-laugh
+-punch
