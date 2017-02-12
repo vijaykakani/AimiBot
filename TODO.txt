@@ -1,4 +1,7 @@
-=tags
+=story   ( COMPLETE )
+=search  ( COMPLETE )
+=author  ( COMPLETE )
+=tags    ( COMPLETE )
 =stats
 =latest
 =top

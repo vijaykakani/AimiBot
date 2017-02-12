@@ -37,3 +37,8 @@ Examples:
 =search 1
 =search rise of an emperor
 =search 1 rise of an emperor
+
+=tags                                   # Displays the list of tags available on the site to search with
+=tags <page number>                     # Shows the stories on that page listing all tags sorted by popularity
+=tags <tag 1> <tag 2> <tag 3> ...       # Shows the stories listed on the site that match the given tag
+=tags <page number> <tag 1> <tag 2> ... # Shows the stories listed on the specified page of the site that matche the tags
