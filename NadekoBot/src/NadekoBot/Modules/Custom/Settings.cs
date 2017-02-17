@@ -9,7 +9,7 @@ using NadekoBot.Services;
 using NadekoBot.Services.Database.Models;
 using System.Collections.Generic;
 
-namespace NadekoBot.Modules.Custom
+namespace NadekoBot.Modules.Settings
 {
     [NadekoModule("Settings", ".")]
 
@@ -17,15 +17,8 @@ namespace NadekoBot.Modules.Custom
     {
         [NadekoCommand, Usage, Description, Aliases]
         [RequireContext(ContextType.Guild)]
-        [OwnerOnly]
-        [Priority(1)]
-        public Task CurrencyGenerationChance([Remainder] string str = null) =>
-            CurrencyGenerationChance(str);
-
-        [NadekoCommand, Usage, Description, Aliases]
-        [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.Administrator)]
-        [Priority(0)]
+        [OwnerOnly]
         public async Task CurrencyGenerationChance(string str = null, [Remainder] ITextChannel channel = null)
         {
             channel = (ITextChannel)Context.Channel;
@@ -66,15 +59,8 @@ namespace NadekoBot.Modules.Custom
 
         [NadekoCommand, Usage, Description, Aliases]
         [RequireContext(ContextType.Guild)]
-        [OwnerOnly]
-        [Priority(1)]
-        public Task HangmanCurrencyRewardAll([Remainder] string str = null) =>
-            HangmanCurrencyRewardAll(str);
-
-        [NadekoCommand, Usage, Description, Aliases]
-        [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.Administrator)]
-        [Priority(0)]
+        [OwnerOnly]
         public async Task HangmanCurrencyRewardAll(string str = null, [Remainder] ITextChannel channel = null)
         {
             channel = (ITextChannel)Context.Channel;
@@ -115,15 +101,8 @@ namespace NadekoBot.Modules.Custom
 
         [NadekoCommand, Usage, Description, Aliases]
         [RequireContext(ContextType.Guild)]
-        [OwnerOnly]
-        [Priority(1)]
-        public Task HangmanCurrencyRewardLetter([Remainder] string str = null) =>
-            HangmanCurrencyRewardLetter(str);
-
-        [NadekoCommand, Usage, Description, Aliases]
-        [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.Administrator)]
-        [Priority(0)]
+        [OwnerOnly]
         public async Task HangmanCurrencyRewardLetter(string str = null, [Remainder] ITextChannel channel = null)
         {
             channel = (ITextChannel)Context.Channel;
@@ -164,15 +143,8 @@ namespace NadekoBot.Modules.Custom
 
         [NadekoCommand, Usage, Description, Aliases]
         [RequireContext(ContextType.Guild)]
-        [OwnerOnly]
-        [Priority(1)]
-        public Task TypeStartCurrencyReward([Remainder] string str = null) =>
-            TypeStartCurrencyReward(str);
-
-        [NadekoCommand, Usage, Description, Aliases]
-        [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.Administrator)]
-        [Priority(0)]
+        [OwnerOnly]
         public async Task TypeStartCurrencyReward(string str = null, [Remainder] ITextChannel channel = null)
         {
             channel = (ITextChannel)Context.Channel;
@@ -213,15 +185,8 @@ namespace NadekoBot.Modules.Custom
 
         [NadekoCommand, Usage, Description, Aliases]
         [RequireContext(ContextType.Guild)]
-        [OwnerOnly]
-        [Priority(1)]
-        public Task TriviaCurrencyReward([Remainder] string str = null) =>
-            TriviaCurrencyReward(str);
-
-        [NadekoCommand, Usage, Description, Aliases]
-        [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.Administrator)]
-        [Priority(0)]
+        [OwnerOnly]
         public async Task TriviaCurrencyReward(string str = null, [Remainder] ITextChannel channel = null)
         {
             channel = (ITextChannel)Context.Channel;
@@ -262,15 +227,8 @@ namespace NadekoBot.Modules.Custom
 
         [NadekoCommand, Usage, Description, Aliases]
         [RequireContext(ContextType.Guild)]
-        [OwnerOnly]
-        [Priority(1)]
-        public Task TriviaCurrencyRewardMultiplier([Remainder] string str = null) =>
-            TriviaCurrencyRewardMultiplier(str);
-
-        [NadekoCommand, Usage, Description, Aliases]
-        [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.Administrator)]
-        [Priority(0)]
+        [OwnerOnly]
         public async Task TriviaCurrencyRewardMultiplier(string str = null, [Remainder] ITextChannel channel = null)
         {
             channel = (ITextChannel)Context.Channel;
