@@ -12,4 +12,14 @@
 -laugh
 -punch
 
->cards
+>betcard or >bc ( CONSTRUCTION )
+
+u!start   or u!s  # Starts the UNO Game
+u!stop    or u!t  # Stops the UNO Game
+u!join    or u!j  # Joins the game and receives random cards from deck
+u!hand    or u!h  # Shows the cards in their hands (shown through DM)
+u!shuffle or u!sh # Shuffles the deck and adds the cards already used
+u!place   or u!p  # Places the matching cards out
+u!draw    or u!d  # Draw a card from the deck
+u!unos    or u!u  # Call Uno when you only have one card and call again when finished to be awarded flowers
+u!quit    or u!q  # Quit the player from playing the game

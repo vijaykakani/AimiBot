@@ -30,7 +30,7 @@ namespace NadekoBot.Modules.Games
         [NadekoCommand, Usage, Description, Aliases]
         [RequireContext(ContextType.Guild)]
         public async Task BetCard(int amount, string guess, [Remainder] string label = null)
-        {
+        {//!< TODO
             var guessStr = guess.Trim().ToUpperInvariant();
             if (guessStr != "H"
                 && guessStr != "S"
@@ -65,7 +65,7 @@ namespace NadekoBot.Modules.Games
                     .SendErrorAsync($"{Context.User.Mention} You don't have enough {NadekoBot.BotConfig.CurrencyPluralName}. You only have {userFlowers}{NadekoBot.BotConfig.CurrencySign}.").ConfigureAwait(false);
                 return;
             }
-
+            
             var debug_msg = new StringBuilder();
             var display_msg = new StringBuilder();
             var error_message = new StringBuilder();
