@@ -19,7 +19,6 @@ u!stop    or u!t  # Stops the UNO Game
 u!join    or u!j  # Joins the game and receives random cards from deck
 u!hand    or u!h  # Shows the cards in their hands (shown through DM)
 u!shuffle or u!sh # Shuffles the deck and adds the cards already used
-u!place   or u!p  # Places the matching cards out
-u!draw    or u!d  # Draw a card from the deck
-u!unos    or u!u  # Call Uno when you only have one card and call again when finished to be awarded flowers
-u!quit    or u!q  # Quit the player from playing the game
+u!put     or u!p  # Places the matching cards out
+u!get     or u!g  # Draw a card from the deck
+u!out     or u!o  # Quit the player from playing the game
