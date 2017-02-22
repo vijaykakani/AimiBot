@@ -30,7 +30,7 @@ namespace NadekoBot.Modules.Games
         [NadekoCommand, Usage, Description, Aliases]
         [RequireContext(ContextType.Guild)]
         public async Task BetCard(int amount, string guess, [Remainder] string label = null)
-        {//!< TODO
+        {
             var guessStr = guess.Trim().ToUpperInvariant();
             if (guessStr != "H"
                 && guessStr != "S"

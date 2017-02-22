@@ -12,7 +12,7 @@
 -laugh
 -punch
 
->betcard or >bc ( CONSTRUCTION )
+>betcard or >bc ( COMPLETE )
 
 u!start           or u!s           # Starts the UNO Game
 u!stop            or u!t           # Stops the UNO Game

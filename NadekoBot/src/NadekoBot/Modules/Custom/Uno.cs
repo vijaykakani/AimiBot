@@ -90,15 +90,23 @@ namespace NadekoBot.Modules.Custom
                 return false;
         }
 
-        public async void SendInfo(IUser usr)
+        public async void SendInfo(IUser usr, bool sendImage = false)
         {
             var str = new StringBuilder();
             str.AppendLine("`ID:` " + _cardID);
             str.AppendLine("`Label:` " + _label.ToUpperInvariant() + " Card");
-            await usr.SendFileAsync(
+            str.AppendLine("`Color:` " + _color);
+            if (sendImage)
+            {
+                await usr.SendFileAsync(
                                 File.Open(_imagePath, FileMode.OpenOrCreate),
                                 new FileInfo(_imagePath).Name, str.ToString())
                                     .ConfigureAwait(false);
+            }
+            else
+            {
+                await usr.SendMessageAsync(str.ToString()).ConfigureAwait(false);
+            }
         }
 
         public void Reset()
@@ -222,6 +230,11 @@ namespace NadekoBot.Modules.Custom
 
         private bool _gameRunning = false;
         private bool _isGameReversed = false;
+
+        private int _minimumPlayers = 2;
+        private int _maximumPlayers = 6;
+        public int MinimumPlayers() { return _minimumPlayers; }
+        public int MaximumPlayers() { return _maximumPlayers; }
 
         public List<UnoPlayer> Players() { return _players; }
         public List<UnoCard> Deck() { return _deck; }
@@ -771,13 +784,19 @@ namespace NadekoBot.Modules.Custom
                     .WithDescription("Cannot join when the game is not running. To start the game, use: `u!start`")).ConfigureAwait(false);
             else
             {
-                UnoPlayer plr = null;
+                if (GameChannel.Game().Players().Count() == GameChannel.Game().MaximumPlayers())
+                {
+                    await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
+                    .WithDescription($"Cannot join because the maximum amount of {GameChannel.Game().MaximumPlayers()} players have already joined"))
+                    .ConfigureAwait(false);
+                    return;
+                }
 
-                if (!GameChannel.Game().PlayerExists(Context.User))
+                if (GameChannel.Game().PlayerExists(Context.User))
                 {
                     GameChannel.Game().HandCardsOut(Context.User);
 
-                    plr = GameChannel.Game().GetPlayer(Context.User);
+                    UnoPlayer plr = GameChannel.Game().GetPlayer(Context.User);
 
                     if ((GameChannel.Game().CurrentPlayerIndex() == -1) && (GameChannel.Game().GetStartingPlayerIndex() == -1))
                     {
@@ -786,15 +805,15 @@ namespace NadekoBot.Modules.Custom
                         GameChannel.Game().SetStartingPlayerIndex(0);
                     }
 
+                    if (bet > 0)
+                        plr.SetBet(bet);
+
                     await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
                         .WithDescription($"{Context.User.Mention} has joined the game")).ConfigureAwait(false);
                 }
                 else
                     await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
                         .WithDescription($"{Context.User.Mention} You are already playing")).ConfigureAwait(false);
-
-                if (bet > 0)
-                    plr.SetBet(bet);
             }
         }
 
@@ -951,7 +970,7 @@ namespace NadekoBot.Modules.Custom
                     else
                     {
                         UnoCard card = cards[0];
-                        if (!card.IsWild())
+                        if (!card.IsPlus4())
                             error_msg.AppendLine($"You need to place the `Plus 4 Card` first in the order of entries for it to work");
                         else if (!Number)
                             error_msg.AppendLine($"A `Plus 4 Card` must have a number card of any colour at the end of it");
@@ -1249,8 +1268,7 @@ namespace NadekoBot.Modules.Custom
                             new_current_player = GameChannel.Game().SkipToPlayer(
                             GameChannel.Game().CurrentPlayerIndex(), -go_turns, false, ref new_current_player_index);
                     }
-
-                    await new_current_player.User().SendConfirmAsync("**---- You Drew This UNO Card ----**").ConfigureAwait(false);
+                    
                     for (int i = 0; i < DrawCards; i++)
                         new_current_player.Draw();
 
@@ -1396,7 +1414,6 @@ namespace NadekoBot.Modules.Custom
             {
                 await plr.User().SendConfirmAsync("**---- You Drew This UNO Card ----**").ConfigureAwait(false);
                 plr.Draw();
-                GameChannel.Game().Update();
                 display_msg.AppendLine($"{Context.User.Mention} drew a card");
             }
             else
