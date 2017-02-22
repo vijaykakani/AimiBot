@@ -31,9 +31,9 @@ namespace NadekoBot.Modules.Settings
 
         [NadekoCommand, Usage, Description, Aliases]
         [RequireContext(ContextType.Guild)]
-        public async Task Story([Remainder] int stody_id = 0)
+        public async Task Story(int story_id = 0)
         {
-            string fullQueryLink = royalroadl_domain + "fiction/" + stody_id;
+            string fullQueryLink = royalroadl_domain + "fiction/" + story_id;
             var embed = new EmbedBuilder();
             StringBuilder error_message = new StringBuilder();
 
@@ -51,7 +51,7 @@ namespace NadekoBot.Modules.Settings
             var existElem = document.QuerySelector("div.col-md-12.page-404");
             if (existElem != null)
             {
-                embed.WithErrorColor().WithDescription($"The story with the ID \"{stody_id}\" does not exist.");
+                embed.WithErrorColor().WithDescription($"The story with the ID \"{story_id}\" does not exist.");
             }
             else
             {
@@ -667,6 +667,134 @@ namespace NadekoBot.Modules.Settings
 
             if (!string.IsNullOrWhiteSpace(debug_msg.ToString()))
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithErrorColor().WithTitle("Debug Report").WithDescription($"{debug_msg.ToString()}")).ConfigureAwait(false);
+
+            if (!string.IsNullOrWhiteSpace(error_message.ToString().Trim()))
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithErrorColor().WithTitle("Error").WithDescription(error_message.ToString())).ConfigureAwait(false);
+        }
+
+        [NadekoCommand, Usage, Description, Aliases]
+        [RequireContext(ContextType.Guild)]
+        public async Task Stats(int story_id = 0)
+        {
+            string fullQueryLink = royalroadl_domain + "fiction/" + story_id;
+            var embed = new EmbedBuilder();
+            StringBuilder error_message = new StringBuilder();
+
+            AngleSharp.Dom.IDocument document = null;
+            try
+            {
+                var config = Configuration.Default.WithDefaultLoader();
+                document = await BrowsingContext.New(config).OpenAsync(fullQueryLink);
+            }
+            catch (Exception ex)
+            {
+                error_message.AppendLine($"Message: {ex.Message}\nSource: searching the site");
+            }
+
+            var existElem = document.QuerySelector("div.col-md-12.page-404");
+            if (existElem != null)
+            {
+                embed.WithErrorColor().WithDescription($"The story with the ID \"{story_id}\" does not exist.");
+            }
+            else
+            {
+                //  title
+                var titleElem = document.QuerySelector("h2.font-white");
+                string titleText = "";
+                try
+                {
+                    titleText = titleElem.Text();
+                }
+                catch (Exception ex)
+                {
+                    error_message.AppendLine($"Message: {ex.Message}\nSource: title");
+                }
+
+                //  author
+                var authorElem = document.QuerySelector("h4.font-white");
+                string authorText = "";
+                try
+                {
+                    authorText = authorElem.Text();
+                }
+                catch (Exception ex)
+                {
+                    error_message.AppendLine($"Message: {ex.Message}\nSource: author");
+                }
+
+                //  cover art
+                var imageElem = document.QuerySelector("img.img-offset");
+                string imageUrl = "";
+                try
+                {
+                    imageUrl = ((IHtmlImageElement)imageElem).Source;
+                }
+                catch (Exception ex)
+                {
+                    error_message.AppendLine($"Message: {ex.Message}\nSource: image");
+                }
+
+                var display = new StringBuilder();
+                display.AppendLine($"**{titleText}** {authorText}\n");
+
+                //  stats base
+                var div_stats_elems = document.QuerySelectorAll("div.stats-content > div.col-sm-6");
+
+                //  score
+                var score_parser = new HtmlParser();
+                var score_p_elem = score_parser.Parse(div_stats_elems[0].InnerHtml);
+                var score_elems = score_p_elem.QuerySelectorAll("span.star");
+                display.AppendLine("**Scores**");
+                try
+                {
+                    foreach (var score_elm in score_elems)
+                    {
+                        var s_title = score_elm.GetAttribute("data-original-title");
+                        var s_stars = score_elm.GetAttribute("data-content");
+                        
+                        display.AppendLine($"`{s_title}:` {s_stars} 🌟");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    error_message.AppendLine($"Message: {ex.Message}\nSource: scores");
+                }
+
+                display.AppendLine("");
+                
+                //  count
+                var count_parser = new HtmlParser();
+                var count_p_elem = score_parser.Parse(div_stats_elems[1].InnerHtml);
+                var count_elems = count_p_elem.QuerySelectorAll("li.bold.uppercase");
+                display.AppendLine("**Count**");
+                try
+                {
+                    for (var i = 0; i < count_elems.Count();)
+                    {
+                        var str = $"`{count_elems[i++].Text()}`";
+                        str += $" {count_elems[i++].Text()}";
+                        display.AppendLine(str);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    error_message.AppendLine($"Message: {ex.Message}\nSource: stats");
+                }
+
+                embed.WithOkColor().WithTitle(titleText);
+                embed.WithDescription(display.ToString());
+                embed.WithUrl(fullQueryLink);
+                embed.WithImageUrl(imageUrl);
+            }
+
+            try
+            {
+                await Context.Channel.EmbedAsync(embed).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                error_message.AppendLine($"Message: {ex.Message}\nSource: sending story message");
+            }
 
             if (!string.IsNullOrWhiteSpace(error_message.ToString().Trim()))
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithErrorColor().WithTitle("Error").WithDescription(error_message.ToString())).ConfigureAwait(false);

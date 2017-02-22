@@ -2,7 +2,7 @@
 =search  ( COMPLETE )
 =author  ( COMPLETE )
 =tags    ( COMPLETE )
-=stats
+=stats   ( COMPLETE )
 =latest
 =top
 =new

@@ -43,6 +43,8 @@ Examples:
 =tags <tag 1> <tag 2> <tag 3> ...       # Shows the stories listed on the site that match the given tag
 =tags <page number> <tag 1> <tag 2> ... # Shows the stories listed on the specified page of the site that matche the tags
 
+=stats <story id>    # Loads the stats of the story given by its id
+
 ==============================
 =========== Games ============
 ==============================
@@ -50,3 +52,19 @@ Examples:
 >betcoin <amount> <card type> <optional: label>   # Bets a certain <amount> on whether you draw the <card type> you specified. If you do input an option for <label> then you will only be scored when both card type and labels are correct
 or
 >bc <amount> <card type> <optional: label>
+
+==============================
+============ UNO =============
+==============================
+
+u!start           or u!s           # Starts the UNO Game
+u!stop            or u!t           # Stops the UNO Game
+u!join <amount>   or u!j <amount>  # Joins the game and receives random cards from deck
+u!hand            or u!h           # Shows the cards in their hands (shown through DM)
+u!shuffle         or u!sh          # Shuffles the deck and adds the cards already used
+u!place           or u!p           # Places the matching cards out
+u!draw            or u!d           # Draw a card from the deck
+u!skip            or u!sk          # Skips the current player's turn
+u!nextplayer      or u!np          # Shows the next player
+u!previousplayer  or u!pp          # Shows the previous player
+u!leave           or u!l           # Quit the player from playing the game

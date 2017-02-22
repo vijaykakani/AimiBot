@@ -570,9 +570,9 @@ namespace NadekoBot.Modules.Custom
             return false;
         }
 
-        public static string GetDaySuffix(int day)
+        public static string GetDigitSuffix(int val)
         {
-            switch (day)
+            switch (val)
             {
                 case 1:
                 case 21:
@@ -1268,7 +1268,7 @@ namespace NadekoBot.Modules.Custom
                         {
                             GameChannel.Game().IncreasePlayersFinishedOrder();
                             plr.SetFinishedUnoOrder(GameChannel.Game().PlayersFinishedOrder());
-                            display_msg.AppendLine($"🎇 {plr.User().Mention} has finished UNO in {plr.FinishedUnoOrder()}{UnoChannel.GetDaySuffix(plr.FinishedUnoOrder())} place");
+                            display_msg.AppendLine($"🎇 {plr.User().Mention} has finished UNO in {plr.FinishedUnoOrder()}{UnoChannel.GetDigitSuffix(plr.FinishedUnoOrder())} place");
                         }
                         else
                         {
