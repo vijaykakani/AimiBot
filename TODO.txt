@@ -23,5 +23,6 @@ u!place           or u!p           # Places the matching cards out
 u!draw            or u!d           # Draw a card from the deck
 u!skip            or u!sk          # Skips the current player's turn
 u!nextplayer      or u!np          # Shows the next player
+u!currentplayer   or u!cp          # Shows the current player
 u!previousplayer  or u!pp          # Shows the previous player
 u!leave           or u!l           # Quit the player from playing the game

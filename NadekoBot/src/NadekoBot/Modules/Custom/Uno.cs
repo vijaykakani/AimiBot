@@ -23,6 +23,18 @@ using System.IO;
 
 namespace NadekoBot.Modules.Custom
 {
+    public class UnoConfig
+    {
+        //  0 (false) = finish when first player is declared the winner
+        //  1 (true)  = continue until second last player finishes
+        public bool GameMode { get; set; } = false;
+
+        public int MinimumPlayers { get; set; } = 2;
+        public int MaximumPlayers { get; set; } = 6;
+
+        public int BetMultiplier { get; set; } = 2;
+    }
+
     public class UnoCard
     {
         private int _cardID = 0;
@@ -73,6 +85,20 @@ namespace NadekoBot.Modules.Custom
         public bool IsSkip() { return _isSkip; }
         public bool IsReverse() { return _isReverse; }
         public bool IsNumber() { return _isNumber; }
+
+        public bool IsActionCard()
+        {
+            if (_isPlus2 || _isSkip || _isReverse)
+                return true;
+            return false;
+        }
+
+        public bool IsStarCard()
+        {
+            if (_isWild || _isPlus4)
+                return true;
+            return false;
+        }
 
         public UnoCard(string label, string type, string color, string imagePath)
         {
@@ -211,7 +237,13 @@ namespace NadekoBot.Modules.Custom
         public void Leave()
         {
             RemoveCards();
+            if (_finishedUno) _game.DecreasePlayersFinishedOrder();
+
             _game.Players().Remove(this);
+
+            foreach (var plr in _game.Players())
+                if (plr.FinishedUnoOrder() > _finishedUnoOrder)
+                    plr.SetFinishedUnoOrder(plr.FinishedUnoOrder() - 1);
         }
     }
 
@@ -222,19 +254,16 @@ namespace NadekoBot.Modules.Custom
         private UnoCard _lastPlacedCard;
         private IMessageChannel _channel;
         private UnoChannel _gameChannel;
+        private UnoConfig _config;
 
         private UnoPlayer _currentPlayer;
         private int _currentPlayerIndex = -1;
         private int _startingPlayerIndex = -1;
-        private int _playersFinishedOrder = 0;
+        private int _playersFinishedOrder = -1;
 
         private bool _gameRunning = false;
         private bool _isGameReversed = false;
-
-        private int _minimumPlayers = 2;
-        private int _maximumPlayers = 6;
-        public int MinimumPlayers() { return _minimumPlayers; }
-        public int MaximumPlayers() { return _maximumPlayers; }
+        private bool _isWinnerDeclared = false;
 
         public List<UnoPlayer> Players() { return _players; }
         public List<UnoCard> Deck() { return _deck; }
@@ -247,12 +276,17 @@ namespace NadekoBot.Modules.Custom
         public void SetChannel(IMessageChannel ch) { _channel = ch; }
         public UnoChannel GameChannel() { return _gameChannel; }
         public void SetGameChannel(UnoChannel gameChannel) { _gameChannel = gameChannel; }
+        public UnoConfig Config() { return _config; }
+        public void SetConfig(UnoConfig config) { _config = config; }
 
         public bool IsGameRunning() { return _gameRunning; }
         public void SetGameRunning(bool val) { _gameRunning = val; }
 
         public bool IsGemeReversed() { return _isGameReversed; }
         public void SetGameReversed(bool val) { _isGameReversed = val; }
+        
+        public bool IsWinnerDeclared() { return _isWinnerDeclared; }
+        public void SetWinnerDeclared(bool val) { _isWinnerDeclared = val; }
 
         public UnoPlayer CurrentPlayer() { return _currentPlayer; }
         public int CurrentPlayerIndex() { return _currentPlayerIndex; }
@@ -269,9 +303,13 @@ namespace NadekoBot.Modules.Custom
 
         public void SetStartingPlayerIndex(int index) { _startingPlayerIndex = index; }
         public int GetStartingPlayerIndex() { return _startingPlayerIndex; }
-
-        public void SetPlayersFinishedOrder(int val) { _playersFinishedOrder = val; }
-        public void IncreasePlayersFinishedOrder() { _playersFinishedOrder += 1; }
+        
+        public void IncreasePlayersFinishedOrder()
+        {
+            if (_playersFinishedOrder == -1)
+                _playersFinishedOrder = 0;
+            _playersFinishedOrder += 1;
+        }
         public void DecreasePlayersFinishedOrder() { _playersFinishedOrder -= 1; }
         public int PlayersFinishedOrder() { return _playersFinishedOrder; }
 
@@ -333,7 +371,12 @@ namespace NadekoBot.Modules.Custom
 
         public void LoadCards()
         {
-            if (_deck.Count() > 0) return;
+            if (_deck.Count() > 0)
+            {
+                foreach (var card in _deck)
+                    card.Reset();
+                return;
+            }
 
             var labels = new Dictionary<string, string> {{"0","0"},{"1","1"},{"2","2"},{"3","3"},{"4","4"},
                 { "5","5"},{"6","6"},{"7","7"},{"8","8"},{"9","9"},{"s","skip"},{"r","reverse"},{"p2","plus 2"},{"w", "wild"},{"p4","plus 4"}};
@@ -353,13 +396,15 @@ namespace NadekoBot.Modules.Custom
                 var color = colors[parts_of_name[1]];
                 var multiply = 1;
 
-                if (parts_of_name.Count() == 2)         //  Wild or Plus 4
+                //  Wild or Plus 4
+                if (parts_of_name.Count() == 2)
                 {
                     type = parts_of_name[1];
                     label = labels[type];
                     multiply = 4;
                 }
-                else                                    //  number, skip, reverse, plus 2
+                //  number, skip, reverse, plus 2
+                else
                 {
                     type = parts_of_name[2];
                     label = labels[type];
@@ -416,14 +461,43 @@ namespace NadekoBot.Modules.Custom
 
         public async void Update()
         {
-            if (NoPlayers())
+            if (NoPlayers() || (_players.Count() < _config.MinimumPlayers))
             {
                 await _channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
-                    .WithDescription($"All players have left the game. Uno is stopped")).ConfigureAwait(false);
+                    .WithDescription($"There are less than players required to play. The game is shutting down.")).ConfigureAwait(false);
                 Reset();
             }
             else
             {
+                //  check whether uno is complete
+                if (_config.GameMode && (_playersFinishedOrder + 1) == _players.Count())
+                {
+                    var display_msg = new StringBuilder();
+                    display_msg.AppendLine("UNO finished! Results:\n");
+
+                    var c_val = _playersFinishedOrder + 1;
+                    foreach (var plr in _players)
+                        if (!plr.FinishedUno())
+                            plr.SetFinishedUnoOrder(c_val++);
+
+                    var uno_players = _players.OrderBy(p => p.FinishedUnoOrder()).ToList();
+
+                    foreach (var plr in uno_players)
+                        display_msg.AppendLine($"`{plr.FinishedUnoOrder()}{UnoChannel.GetDigitSuffix(plr.FinishedUnoOrder())}:` {plr.User()}");
+
+                    await _channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithDescription(display_msg.ToString())).ConfigureAwait(false);
+
+                    Reset();
+                    return;
+                }
+                else if (!_config.GameMode && _isWinnerDeclared)
+                {
+                    await _channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
+                        .WithDescription("With the winner declared, the game is shutting down.")).ConfigureAwait(false);
+                    Reset();
+                    return;
+                }
+
                 UpdateDeck();
 
                 //  A full round is complete, so this can be enabled again
@@ -442,7 +516,7 @@ namespace NadekoBot.Modules.Custom
 
             foreach (var card in _deck)
             {
-                if (card.CanUse())
+                if (card.CanUse() && (card.Color() == "red"))
                 {
                     id++;
                     card.SetID(id);
@@ -450,7 +524,7 @@ namespace NadekoBot.Modules.Custom
                     cards.Add(card);
                 }
 
-                if (id == 7) break; //  break since 7 cards limit has been reached
+                if (id == 2) break; //  break since 7 cards limit has been reached
             }
 
             _players.Add(new UnoPlayer(usr, cards, this, this._channel));
@@ -504,14 +578,15 @@ namespace NadekoBot.Modules.Custom
         {
             _players.Clear();
             _gameRunning = false;
-            _channel = null;
 
             _lastPlacedCard = null;
             _currentPlayer = null;
 
             _currentPlayerIndex = -1;
             _startingPlayerIndex = -1;
-            _playersFinishedOrder = 0;
+            _playersFinishedOrder = -1;
+
+            _isGameReversed = false;
 
             foreach (var card in _deck)
                 card.Reset();
@@ -563,6 +638,16 @@ namespace NadekoBot.Modules.Custom
         public void SetGame (UnoGame game) { _game = game; }
         public UnoGame Game() { return _game; }
 
+        public static bool DoesGameChannelExist(IMessageChannel ch)
+        {
+            foreach (var chan in _channels)
+            {
+                if (chan._channel == ch)
+                    return true;
+            }
+            return false;
+        }
+
         public static UnoChannel GetGameChannel(IMessageChannel ch)
         {
             foreach (var chan in _channels)
@@ -573,14 +658,14 @@ namespace NadekoBot.Modules.Custom
             return null;
         }
 
-        public static bool DoesGameChannelExist(IMessageChannel ch)
+        public static UnoGame GetGame(IMessageChannel ch)
         {
             foreach (var chan in _channels)
             {
                 if (chan._channel == ch)
-                    return true;
+                    return chan._game;
             }
-            return false;
+            return null;
         }
 
         public static string GetDigitSuffix(int val)
@@ -600,6 +685,14 @@ namespace NadekoBot.Modules.Custom
                 default:
                     return "th";
             }
+        }
+
+        public static bool IsGameActive(IMessageChannel ch)
+        {
+            var Game = GetGame(ch);
+            if (!DoesGameChannelExist(ch) || !Game.IsGameRunning())
+                return false;
+            return true;
         }
 
         public UnoChannel(IMessageChannel ch)
@@ -655,7 +748,7 @@ namespace NadekoBot.Modules.Custom
                     try
                     {
                         UnoCard placementCard = GameChannel.Game().GetRandomCard();
-                        while (placementCard.IsWild() || placementCard.IsPlus4() || placementCard.IsPlus2() || placementCard.IsSkip() || placementCard.IsReverse())
+                        while (placementCard.IsActionCard() || placementCard.IsStarCard() || (placementCard.Color() != "red"))
                             placementCard = GameChannel.Game().GetRandomCard();
                         placementCard.SetCardPlaced(true);
 
@@ -690,33 +783,45 @@ namespace NadekoBot.Modules.Custom
         [RequireContext(ContextType.Guild)]
         public async Task Stop()
         {
-            UnoChannel GameChannel = UnoChannel.GetGameChannel(Context.Channel);
-
-            var display_msg = new StringBuilder();
-            if ((GameChannel == null) || !GameChannel.Game().IsGameRunning())
-                display_msg.AppendLine($"The game is not running");
+            if (!UnoChannel.IsGameActive(Context.Channel))
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
+                    .WithDescription("The game is not running. Type `u!start` to start it")).ConfigureAwait(false);
             else
             {
-                GameChannel.Game().Reset();
-                display_msg.AppendLine($"Game stopped");
+                var Game = UnoChannel.GetGame(Context.Channel);
+                if (!Game.PlayerExists(Context.User))
+                {
+                    await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
+                    .WithDescription("Only players are allowed to stop the game")).ConfigureAwait(false);
+                    return;
+                }
+
+                Game.Reset();
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithDescription("Game has stopped")).ConfigureAwait(false);
             }
-            
-            await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithDescription(display_msg.ToString())).ConfigureAwait(false);
         }
 
         [NadekoCommand, Usage, Description, Aliases]
         [RequireContext(ContextType.Guild)]
         public async Task Shuffle()
         {
-            UnoChannel GameChannel = UnoChannel.GetGameChannel(Context.Channel);
-
-            if ((GameChannel == null) || !GameChannel.Game().IsGameRunning())
-                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithDescription("Cannot shuffle deck when the game isn't running")).ConfigureAwait(false);
+            if (!UnoChannel.IsGameActive(Context.Channel))
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
+                    .WithDescription("Cannot shuffle deck when the game isn't running")).ConfigureAwait(false);
             else
             {
-                GameChannel.Game().ShuffleDeck();
-                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithDescription("Shuffled the deck")).ConfigureAwait(false);
-                GameChannel.Game().UpdateDeck();
+                var Game = UnoChannel.GetGame(Context.Channel);
+
+                if (!Game.PlayerExists(Context.User))
+                {
+                    await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
+                    .WithDescription("Only players are allowed to shuffle the deck")).ConfigureAwait(false);
+                    return;
+                }
+
+                Game.ShuffleDeck();
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithDescription("The deck is shuffled")).ConfigureAwait(false);
+                Game.UpdateDeck();
             }
         }
 
@@ -724,17 +829,15 @@ namespace NadekoBot.Modules.Custom
         [RequireContext(ContextType.Guild)]
         public async Task NextPlayer()
         {
-            var display_msg = new StringBuilder();
-            UnoChannel GameChannel = UnoChannel.GetGameChannel(Context.Channel);
-
-            if ((GameChannel == null) || !GameChannel.Game().IsGameRunning())
+            if (!UnoChannel.IsGameActive(Context.Channel))
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
                     .WithDescription("Cannot see next player when the game is not running")).ConfigureAwait(false);
             else
             {
-                if (GameChannel.Game().NoPlayers()) return;
+                var Game = UnoChannel.GetGame(Context.Channel);
+                if (Game.NoPlayers()) return;
 
-                UnoPlayer plr = GameChannel.Game().GetNextPlayer();
+                UnoPlayer plr = Game.GetNextPlayer();
                 var mention = "";
                 if (plr.User() == Context.User)
                     mention = "you";
@@ -748,19 +851,40 @@ namespace NadekoBot.Modules.Custom
 
         [NadekoCommand, Usage, Description, Aliases]
         [RequireContext(ContextType.Guild)]
+        public async Task CurrentPlayer()
+        {
+            if (!UnoChannel.IsGameActive(Context.Channel))
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
+                    .WithDescription("Cannot see the current player when the game is not running")).ConfigureAwait(false);
+            else
+            {
+                var Game = UnoChannel.GetGame(Context.Channel);
+                if (Game.NoPlayers()) return;
+                
+                var mention = "";
+                if (Game.CurrentPlayer().User() == Context.User)
+                    mention = "you";
+                else
+                    mention = Game.CurrentPlayer().User().Mention;
+
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
+                    .WithDescription($"{Context.User.Mention} The current player is {mention}")).ConfigureAwait(false);
+            }
+        }
+
+        [NadekoCommand, Usage, Description, Aliases]
+        [RequireContext(ContextType.Guild)]
         public async Task PreviousPlayer()
         {
-            var display_msg = new StringBuilder();
-            UnoChannel GameChannel = UnoChannel.GetGameChannel(Context.Channel);
-
-            if ((GameChannel == null) || !GameChannel.Game().IsGameRunning())
+            if (!UnoChannel.IsGameActive(Context.Channel))
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
                     .WithDescription("Cannot see next player when the game is not running")).ConfigureAwait(false);
             else
             {
-                if (GameChannel.Game().NoPlayers()) return;
+                var Game = UnoChannel.GetGame(Context.Channel);
+                if (Game.NoPlayers()) return;
 
-                UnoPlayer plr = GameChannel.Game().GetPreviousPlayer();
+                UnoPlayer plr = Game.GetPreviousPlayer();
                 var mention = "";
                 if (plr.User() == Context.User)
                     mention = "you";
@@ -776,40 +900,50 @@ namespace NadekoBot.Modules.Custom
         [RequireContext(ContextType.Guild)]
         public async Task Join(int bet = 0)
         {
-            var display_msg = new StringBuilder();
-            UnoChannel GameChannel = UnoChannel.GetGameChannel(Context.Channel);
-
-            if ((GameChannel == null) || !GameChannel.Game().IsGameRunning())
+            if (!UnoChannel.IsGameActive(Context.Channel))
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
                     .WithDescription("Cannot join when the game is not running. To start the game, use: `u!start`")).ConfigureAwait(false);
             else
             {
-                if (GameChannel.Game().Players().Count() == GameChannel.Game().MaximumPlayers())
+                var Game = UnoChannel.GetGame(Context.Channel);
+
+                if (Game.Players().Count() == Game.Config().MaximumPlayers)
                 {
                     await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
-                    .WithDescription($"Cannot join because the maximum amount of {GameChannel.Game().MaximumPlayers()} players have already joined"))
+                    .WithDescription($"Cannot join because the maximum amount of {Game.Config().MaximumPlayers} players have already joined"))
                     .ConfigureAwait(false);
                     return;
                 }
 
-                if (GameChannel.Game().PlayerExists(Context.User))
+                if (!Game.PlayerExists(Context.User))
                 {
-                    GameChannel.Game().HandCardsOut(Context.User);
+                    Game.HandCardsOut(Context.User);
+                    await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
+                        .WithDescription($"{Context.User.Mention} has joined the game")).ConfigureAwait(false);
 
-                    UnoPlayer plr = GameChannel.Game().GetPlayer(Context.User);
+                    UnoPlayer plr = Game.GetPlayer(Context.User);
 
-                    if ((GameChannel.Game().CurrentPlayerIndex() == -1) && (GameChannel.Game().GetStartingPlayerIndex() == -1))
+                    if ((Game.CurrentPlayerIndex() == -1) && (Game.GetStartingPlayerIndex() == -1))
                     {
-                        GameChannel.Game().SetCurrentPlayer(plr);
-                        GameChannel.Game().SetCurrentPlayerIndex(0);
-                        GameChannel.Game().SetStartingPlayerIndex(0);
+                        Game.SetCurrentPlayer(plr);
+                        Game.SetCurrentPlayerIndex(0);
+                        Game.SetStartingPlayerIndex(0);
+
+                        await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
+                        .WithDescription($"You are the starting player {Context.User.Mention}")).ConfigureAwait(false);
                     }
 
                     if (bet > 0)
-                        plr.SetBet(bet);
+                    {
+                        if (bet < NadekoBot.BotConfig.MinimumBetAmount)
+                        {
+                            await Context.Channel.SendErrorAsync($"You can't bet less than {NadekoBot.BotConfig.MinimumBetAmount}{NadekoBot.BotConfig.CurrencySign}.")
+                                         .ConfigureAwait(false);
+                            return;
+                        }
 
-                    await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
-                        .WithDescription($"{Context.User.Mention} has joined the game")).ConfigureAwait(false);
+                        plr.SetBet(bet);
+                    }
                 }
                 else
                     await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
@@ -821,25 +955,32 @@ namespace NadekoBot.Modules.Custom
         [RequireContext(ContextType.Guild)]
         public async Task Place([Remainder] string param = null)
         {
-            UnoChannel GameChannel = UnoChannel.GetGameChannel(Context.Channel);
-            if ((GameChannel == null) || !GameChannel.Game().IsGameRunning())
-                return;
-
             if (string.IsNullOrWhiteSpace(param))
                 return;
 
-            if (!GameChannel.Game().PlayerExists(Context.User))
+            if (!UnoChannel.IsGameActive(Context.Channel))
+                return;
+
+            var Game = UnoChannel.GetGame(Context.Channel);
+            if (!Game.PlayerExists(Context.User))
             {
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
                     .WithDescription($"{Context.User.Mention} You aren't playing the game")).ConfigureAwait(false);
                 return;
             }
 
-            var plr = GameChannel.Game().GetPlayer(Context.User);
+            if (Game.Players().Count() < Game.Config().MinimumPlayers)
+            {
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
+                    .WithDescription($"Less than minimum players active.")).ConfigureAwait(false);
+                return;
+            }
+
+            var plr = Game.GetPlayer(Context.User);
             UnoPlayer new_current_player = null;
             int new_current_player_index = -1;
 
-            if (plr != GameChannel.Game().CurrentPlayer())
+            if (plr != Game.CurrentPlayer())
             {
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
                     .WithDescription($"{Context.User.Mention} Please wait. It isn't your turn to play yet")).ConfigureAwait(false);
@@ -1065,10 +1206,10 @@ namespace NadekoBot.Modules.Custom
                         //  Result = FAILURE
 
                         UnoCard first_card = cards[0];
-                        if ((first_card.Label() != GameChannel.Game().LastPlacedCard().Label())
-                            && (first_card.Color() != GameChannel.Game().LastPlacedCard().Color()))
+                        if ((first_card.Label() != Game.LastPlacedCard().Label())
+                            && (first_card.Color() != Game.LastPlacedCard().Color()))
                         {
-                            error_msg.AppendLine($"Your first `{first_card.Label()} Number Card` does not match with the last card already played");
+                            error_msg.AppendLine($"Your first `{first_card.Label()} Number Card` does not match with the last card played");
                             proceed = false;
                         }
                     }
@@ -1079,10 +1220,10 @@ namespace NadekoBot.Modules.Custom
                 if (!Number && proceed && !Wild && !Plus4 && !Plus2 && Skip && !Reverse)
                 {
                     UnoCard first_card = cards[0];
-                    if ((first_card.Label() != GameChannel.Game().LastPlacedCard().Label())
-                            && (first_card.Color() != GameChannel.Game().LastPlacedCard().Color()))
+                    if ((first_card.Label() != Game.LastPlacedCard().Label())
+                            && (first_card.Color() != Game.LastPlacedCard().Color()))
                     {
-                        error_msg.AppendLine($"Your first `Skip Card` does not match in color with the last card already played");
+                        error_msg.AppendLine($"Your first `Skip Card` does not match in color with the last card played");
                         proceed = false;
                     }
                 }
@@ -1092,10 +1233,10 @@ namespace NadekoBot.Modules.Custom
                 if (!Number && proceed && !Wild && !Plus4 && !Plus2 && !Skip && Reverse)
                 {
                     UnoCard first_card = cards[0];
-                    if ((first_card.Label() != GameChannel.Game().LastPlacedCard().Label())
-                            && (first_card.Color() != GameChannel.Game().LastPlacedCard().Color()))
+                    if ((first_card.Label() != Game.LastPlacedCard().Label())
+                            && (first_card.Color() != Game.LastPlacedCard().Color()))
                     {
-                        error_msg.AppendLine($"Your first `Reverse Card` does not match with the last card already played");
+                        error_msg.AppendLine($"Your first `Reverse Card` does not match with the last card played");
                         proceed = false;
                     }
                 }
@@ -1105,10 +1246,10 @@ namespace NadekoBot.Modules.Custom
                 if (!Number && proceed && !Wild && !Plus4 && Plus2 && !Skip && !Reverse)
                 {
                     UnoCard first_card = cards[0];
-                    if ((first_card.Label() != GameChannel.Game().LastPlacedCard().Label())
-                            && (first_card.Color() != GameChannel.Game().LastPlacedCard().Color()))
+                    if ((first_card.Label() != Game.LastPlacedCard().Label())
+                            && (first_card.Color() != Game.LastPlacedCard().Color()))
                     {
-                        error_msg.AppendLine($"Your first `Plus 2 Card` does not match with the last card already played");
+                        error_msg.AppendLine($"Your first `Plus 2 Card` does not match with the last card played");
                         proceed = false;
                     }
                 }
@@ -1140,30 +1281,38 @@ namespace NadekoBot.Modules.Custom
                     if (card_counter == 1)  //  Wild/Plus 4 Card came first, then...
                     {
                         if (Skip || Reverse)
-                            new_current_player_index = GameChannel.Game().CurrentPlayerIndex();
+                            new_current_player_index = Game.CurrentPlayerIndex();
 
                         foreach (var card in cards)
                         {
                             if (card.IsSkip())
                             {
-                                if (!GameChannel.Game().IsGemeReversed())
-                                    new_current_player = GameChannel.Game().SkipToPlayer(new_current_player_index, 1, true, ref new_current_player_index);
-                                else
-                                    new_current_player = GameChannel.Game().SkipToPlayer(new_current_player_index, -1, false, ref new_current_player_index);
+                                do
+                                {
+                                    if (!Game.IsGemeReversed())
+                                        new_current_player = Game.SkipToPlayer(new_current_player_index, 1, true, ref new_current_player_index);
+                                    else
+                                        new_current_player = Game.SkipToPlayer(new_current_player_index, -1, false, ref new_current_player_index);
+                                }
+                                while (new_current_player.FinishedUno()) ;
                             }
 
                             if (card.IsReverse())
                             {
-                                if (GameChannel.Game().IsGemeReversed())
-                                    GameChannel.Game().SetGameReversed(false);
+                                if (Game.IsGemeReversed())
+                                    Game.SetGameReversed(false);
                                 else
-                                    GameChannel.Game().SetGameReversed(true);
+                                    Game.SetGameReversed(true);
 
-                                //  the effect goes to the person after the chosen one
-                                if (!GameChannel.Game().IsGemeReversed())
-                                    new_current_player = GameChannel.Game().SkipToPlayer(new_current_player_index, 0, true, ref new_current_player_index);
-                                else
-                                    new_current_player = GameChannel.Game().SkipToPlayer(new_current_player_index, 0, false, ref new_current_player_index);
+                                do
+                                {
+                                    //  the effect goes to the person after the chosen one
+                                    if (!Game.IsGemeReversed())
+                                        new_current_player = Game.SkipToPlayer(new_current_player_index, 0, true, ref new_current_player_index);
+                                    else
+                                        new_current_player = Game.SkipToPlayer(new_current_player_index, 0, false, ref new_current_player_index);
+                                }
+                                while (new_current_player.FinishedUno());
                             }
                         }
                     }
@@ -1195,10 +1344,10 @@ namespace NadekoBot.Modules.Custom
                             {
                                 if (card.IsReverse())
                                 {
-                                    if (GameChannel.Game().IsGemeReversed())
-                                        GameChannel.Game().SetGameReversed(false);
+                                    if (Game.IsGemeReversed())
+                                        Game.SetGameReversed(false);
                                     else
-                                        GameChannel.Game().SetGameReversed(true);
+                                        Game.SetGameReversed(true);
                                 }
                             }
                         }
@@ -1243,10 +1392,10 @@ namespace NadekoBot.Modules.Custom
                             int next_player_index = 0;
                             UnoPlayer next_player = null;
 
-                            if (!GameChannel.Game().IsGemeReversed())
-                                next_player = GameChannel.Game().SkipToPlayer(GameChannel.Game().CurrentPlayerIndex(), i, true, ref next_player_index);
+                            if (!Game.IsGemeReversed())
+                                next_player = Game.SkipToPlayer(Game.CurrentPlayerIndex(), i, true, ref next_player_index);
                             else
-                                next_player = GameChannel.Game().SkipToPlayer(GameChannel.Game().CurrentPlayerIndex(), -i, false, ref next_player_index);
+                                next_player = Game.SkipToPlayer(Game.CurrentPlayerIndex(), -i, false, ref next_player_index);
                             display_msg.AppendLine($"⏩ {next_player.User().Mention} got skipped");
                         }
                     }
@@ -1254,69 +1403,84 @@ namespace NadekoBot.Modules.Custom
                     //  sets the starting index for the new round
                     if (Reverse)
                     {
-                        GameChannel.Game().SetStartingPlayerIndex(new_current_player_index);
+                        Game.SetStartingPlayerIndex(new_current_player_index);
                         display_msg.AppendLine($"➤ {plr.User().Mention} reversed {no_reverse} times".ToString().SnPl(no_reverse));
                     }
 
                     //  selecting the next player to continue the game from
                     if ((new_current_player_index == -1) && (new_current_player == null))
                     {
-                        if (!GameChannel.Game().IsGemeReversed())
-                            new_current_player = GameChannel.Game().SkipToPlayer(
-                            GameChannel.Game().CurrentPlayerIndex(), go_turns, true, ref new_current_player_index);
-                        else
-                            new_current_player = GameChannel.Game().SkipToPlayer(
-                            GameChannel.Game().CurrentPlayerIndex(), -go_turns, false, ref new_current_player_index);
+                        do
+                        {
+                            if (!Game.IsGemeReversed())
+                                new_current_player = Game.SkipToPlayer(
+                                Game.CurrentPlayerIndex(), go_turns, true, ref new_current_player_index);
+                            else
+                                new_current_player = Game.SkipToPlayer(
+                                Game.CurrentPlayerIndex(), -go_turns, false, ref new_current_player_index);
+                        }
+                        while (new_current_player.FinishedUno());
                     }
-                    
+
+                    if (DrawCards > 0)
+                    {
+                        await new_current_player.User().SendConfirmAsync($"**---- You Drew {DrawCards} UNO Card ----**").ConfigureAwait(false);
+
+                        if (new_current_player.FirstUnoCalled())
+                            new_current_player.SetFinishedUno(false);
+
+                        display_msg.AppendLine($":scream: {plr.User().Mention} made {new_current_player.User().Mention} draw {DrawCards} cards");
+                    }
+
                     for (int i = 0; i < DrawCards; i++)
                         new_current_player.Draw();
 
-                    if (DrawCards > 0)
-                        display_msg.AppendLine($":scream: {plr.User().Mention} made {new_current_player.User().Mention} draw {DrawCards} cards");
-
                     //  sets the new current player
-                    GameChannel.Game().SetCurrentPlayer(GameChannel.Game().Players()[new_current_player_index]);
-                    GameChannel.Game().SetCurrentPlayerIndex(new_current_player_index);
-                    GameChannel.Game().SetLastPlacedCard(last_card);
+                    Game.SetCurrentPlayer(new_current_player);
+                    Game.SetCurrentPlayerIndex(new_current_player_index);
+                    Game.SetLastPlacedCard(last_card);
 
-                    if (plr.Cards().Count() == 1)
+                    //  process the UNO completion
+                    if (plr.FirstUnoCalled() || plr.Cards().Count() == 0)
                     {
-                        if (plr.FirstUnoCalled())
+                        plr.SetFinishedUno(true);
+
+                        if (Game.Config().GameMode)
                         {
-                            GameChannel.Game().IncreasePlayersFinishedOrder();
-                            plr.SetFinishedUnoOrder(GameChannel.Game().PlayersFinishedOrder());
-                            display_msg.AppendLine($"🎇 {plr.User().Mention} has finished UNO in {plr.FinishedUnoOrder()}{UnoChannel.GetDigitSuffix(plr.FinishedUnoOrder())} place");
+                            Game.IncreasePlayersFinishedOrder();
+                            plr.SetFinishedUnoOrder(Game.PlayersFinishedOrder());
+                            display_msg.AppendLine($"🎇 {plr.User().Mention} finished in {plr.FinishedUnoOrder()}{UnoChannel.GetDigitSuffix(plr.FinishedUnoOrder())} place. Well done!");
                         }
                         else
                         {
-                            plr.SetFirstUnoCalled(true);
-                            display_msg.AppendLine($"⛳ {plr.User().Mention} has called Uno with only one card in hand");
+                            Game.SetWinnerDeclared(true);
+                            display_msg.AppendLine($"🎇 {plr.User().Mention} finished 1st! Well done!");
                         }
                     }
-                    else if (plr.Cards().Count() == 0)
+                    else if (plr.Cards().Count() == 1)
                     {
-                        GameChannel.Game().IncreasePlayersFinishedOrder();
-                        plr.SetFinishedUnoOrder(GameChannel.Game().PlayersFinishedOrder());
+                        plr.SetFirstUnoCalled(true);
+                        display_msg.AppendLine($"⛳ {plr.User().Mention} called UNO! One card remaining!");
                     }
 
                     //  Checks for bets and processes them when the player finish order reaches 1
-                    if (GameChannel.Game().PlayersFinishedOrder() == 1)
+                    if ((Game.PlayersFinishedOrder() == 1) || (!Game.Config().GameMode && Game.IsWinnerDeclared()))
                     {
-                        foreach (var s_plr in GameChannel.Game().Players())
+                        foreach (var s_plr in Game.Players())
                         {
                             if (s_plr.Bet() > 0)
                             {
-                                await CurrencyHandler.RemoveCurrencyAsync(Context.User, "Uno Gamble", s_plr.Bet(), false).ConfigureAwait(false);
+                                await CurrencyHandler.RemoveCurrencyAsync(Context.User, "Uno Bet", s_plr.Bet(), false).ConfigureAwait(false);
 
                                 if (s_plr == plr)
                                 {
-                                    var award = s_plr.Bet() * 2;
+                                    var award = s_plr.Bet() * Game.Config().BetMultiplier;
                                     display_msg.AppendLine($"{s_plr.User().Mention} has won their bet! They received {award}{NadekoBot.BotConfig.CurrencySign}");
+                                    await CurrencyHandler.AddCurrencyAsync(Context.User, "Uno Bet", award, false).ConfigureAwait(false);
                                 }
                                 else
                                 {
-                                    await s_plr.User().SendMessageAsync($":scream: You lost the bet. Better luck next time.").ConfigureAwait(false);
+                                    await s_plr.User().SendMessageAsync($":frowning: You lost the bet. Better luck next time.").ConfigureAwait(false);
                                 }
                             }
                         }
@@ -1328,10 +1492,12 @@ namespace NadekoBot.Modules.Custom
 
             if (success)
             {
-                GameChannel.Game().Update();
+                if ((Game.PlayersFinishedOrder() + 1) < Game.Players().Count())
+                    display_msg.AppendLine($"\n👉 It is your turn {new_current_player.User().Mention} 👈");
 
-                display_msg.AppendLine($"\n👉 It is your turn {new_current_player.User().Mention} 👈");
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithDescription(display_msg.ToString())).ConfigureAwait(false);
+
+                Game.Update();
             }
             else
             {
@@ -1349,17 +1515,21 @@ namespace NadekoBot.Modules.Custom
         [RequireContext(ContextType.Guild)]
         public async Task Skip()
         {
-            UnoChannel GameChannel = UnoChannel.GetGameChannel(Context.Channel);
-            if ((GameChannel == null) || !GameChannel.Game().IsGameRunning())
-                return;
+            if (!UnoChannel.IsGameActive(Context.Channel)) return;
 
-            if (!GameChannel.Game().PlayerExists(Context.User))
+            var Game = UnoChannel.GetGame(Context.Channel);
+            if (Game.Players().Count() < Game.Config().MinimumPlayers)
+            {
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
+                    .WithDescription($"Less than minimum players active.")).ConfigureAwait(false);
                 return;
+            }
 
-            UnoPlayer plr = GameChannel.Game().GetPlayer(Context.User);
+            if (!Game.PlayerExists(Context.User)) return;
 
-            if (plr != GameChannel.Game().CurrentPlayer())
-                return;
+            UnoPlayer plr = Game.GetPlayer(Context.User);
+
+            if (plr != Game.CurrentPlayer()) return;
 
             //  Checks whether the player has either:
             //
@@ -1376,31 +1546,38 @@ namespace NadekoBot.Modules.Custom
             await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
                 .WithDescription($"⏩ {Context.User.Mention} skipped their turn")).ConfigureAwait(false);
 
-            int next_current_player_index = GameChannel.Game().CurrentPlayerIndex();
+            int next_current_player_index = Game.CurrentPlayerIndex();
             UnoPlayer new_current_player = null;
-            if (!GameChannel.Game().IsGemeReversed())
-                new_current_player = GameChannel.Game().SkipToPlayer(
-                GameChannel.Game().CurrentPlayerIndex(), 0, true, ref next_current_player_index);
+            if (!Game.IsGemeReversed())
+                new_current_player = Game.SkipToPlayer(
+                Game.CurrentPlayerIndex(), 0, true, ref next_current_player_index);
             else
-                new_current_player = GameChannel.Game().SkipToPlayer(
-                GameChannel.Game().CurrentPlayerIndex(), 0, false, ref next_current_player_index);
+                new_current_player = Game.SkipToPlayer(
+                Game.CurrentPlayerIndex(), 0, false, ref next_current_player_index);
 
-            GameChannel.Game().SetCurrentPlayer(new_current_player);
-            GameChannel.Game().SetCurrentPlayerIndex(next_current_player_index);
+            Game.SetCurrentPlayer(new_current_player);
+            Game.SetCurrentPlayerIndex(next_current_player_index);
             await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
-                                .WithDescription($"👉 It is your turn {new_current_player.User().Mention}")).ConfigureAwait(false);
+                                .WithDescription($"👉 It's your turn {new_current_player.User().Mention}")).ConfigureAwait(false);
 
-            GameChannel.Game().Update();
+            Game.Update();
         }
 
         [NadekoCommand, Usage, Description, Aliases]
         [RequireContext(ContextType.Guild)]
         public async Task Draw()
         {
-            UnoChannel GameChannel = UnoChannel.GetGameChannel(Context.Channel);
-            if ((GameChannel == null) || !GameChannel.Game().IsGameRunning()) return;
+            if (!UnoChannel.IsGameActive(Context.Channel)) return;
 
-            if (!GameChannel.Game().PlayerExists(Context.User))
+            var Game = UnoChannel.GetGame(Context.Channel);
+            if (Game.Players().Count() < Game.Config().MinimumPlayers)
+            {
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
+                    .WithDescription($"Less than minimum players active.")).ConfigureAwait(false);
+                return;
+            }
+
+            if (!Game.PlayerExists(Context.User))
             {
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
                     .WithDescription($"{Context.User.Mention} You must play Uno to draw a card"))
@@ -1408,7 +1585,7 @@ namespace NadekoBot.Modules.Custom
                 return;
             }
             var display_msg = new StringBuilder();
-            var plr = GameChannel.Game().GetPlayer(Context.User);
+            var plr = Game.GetPlayer(Context.User);
 
             if (!plr.AlreadyDrawn())
             {
@@ -1426,18 +1603,17 @@ namespace NadekoBot.Modules.Custom
         [RequireContext(ContextType.Guild)]
         public async Task Hand()
         {
-            UnoChannel GameChannel = UnoChannel.GetGameChannel(Context.Channel);
-            if ((GameChannel == null) || !GameChannel.Game().IsGameRunning()) return;
+            if (!UnoChannel.IsGameActive(Context.Channel)) return;
 
-            var display_msg = new StringBuilder();
-            if (!GameChannel.Game().PlayerExists(Context.User))
+            var Game = UnoChannel.GetGame(Context.Channel);
+            if (!Game.PlayerExists(Context.User))
             {
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
-                    .WithDescription($"{Context.User.Mention} You must play the game in order to have cards!")).ConfigureAwait(false);
+                    .WithDescription($"{Context.User.Mention} You must join the game in order to have cards!")).ConfigureAwait(false);
                 return;
             }
 
-            var plr = GameChannel.Game().GetPlayer(Context.User);
+            var plr = Game.GetPlayer(Context.User);
             await Context.User.SendConfirmAsync("**---- Your Hand: UNO Cards ----**").ConfigureAwait(false);
             plr.ShowCards();
         }
@@ -1446,18 +1622,18 @@ namespace NadekoBot.Modules.Custom
         [RequireContext(ContextType.Guild)]
         public async Task Leave()
         {
-            UnoChannel GameChannel = UnoChannel.GetGameChannel(Context.Channel);
-            if ((GameChannel == null) || !GameChannel.Game().IsGameRunning()) return;
+            if (!UnoChannel.IsGameActive(Context.Channel)) return;
 
-            if (!GameChannel.Game().PlayerExists(Context.User)) return;
+            var Game = UnoChannel.GetGame(Context.Channel);
+            if (!Game.PlayerExists(Context.User)) return;
 
-            UnoPlayer plr = GameChannel.Game().GetPlayer(Context.User);
+            UnoPlayer plr = Game.GetPlayer(Context.User);
             plr.Leave();
 
             await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
                 .WithDescription($"{Context.User.Mention} left the game")).ConfigureAwait(false);
 
-            GameChannel.Game().Update();
+            Game.Update();
         }
     }
 }
