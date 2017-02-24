@@ -254,7 +254,7 @@ namespace NadekoBot.Modules.Custom
         private UnoCard _lastPlacedCard;
         private IMessageChannel _channel;
         private UnoChannel _gameChannel;
-        private UnoConfig _config;
+        private UnoConfig _config = new UnoConfig();
 
         private UnoPlayer _currentPlayer;
         private int _currentPlayerIndex = -1;
@@ -493,7 +493,7 @@ namespace NadekoBot.Modules.Custom
                 else if (!_config.GameMode && _isWinnerDeclared)
                 {
                     await _channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
-                        .WithDescription("With the winner declared, the game is shutting down.")).ConfigureAwait(false);
+                        .WithDescription("With the winner declared, the game has shutdown.")).ConfigureAwait(false);
                     Reset();
                     return;
                 }
@@ -587,6 +587,7 @@ namespace NadekoBot.Modules.Custom
             _playersFinishedOrder = -1;
 
             _isGameReversed = false;
+            _isWinnerDeclared = false;
 
             foreach (var card in _deck)
                 card.Reset();
@@ -930,15 +931,28 @@ namespace NadekoBot.Modules.Custom
                         Game.SetStartingPlayerIndex(0);
 
                         await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
-                        .WithDescription($"You are the starting player {Context.User.Mention}")).ConfigureAwait(false);
+                        .WithDescription($"{Context.User.Mention} is the starting player")).ConfigureAwait(false);
                     }
 
                     if (bet > 0)
                     {
                         if (bet < NadekoBot.BotConfig.MinimumBetAmount)
                         {
-                            await Context.Channel.SendErrorAsync($"You can't bet less than {NadekoBot.BotConfig.MinimumBetAmount}{NadekoBot.BotConfig.CurrencySign}.")
+                            await Context.Channel.SendErrorAsync($"You can't bet less than {NadekoBot.BotConfig.MinimumBetAmount}{NadekoBot.BotConfig.CurrencySign}")
                                          .ConfigureAwait(false);
+                            return;
+                        }
+
+                        long userFlowers;
+                        using (var uow = DbHandler.UnitOfWork())
+                        {
+                            userFlowers = uow.Currency.GetOrCreate(Context.User.Id).Amount;
+                        }
+
+                        if (userFlowers < bet)
+                        {
+                            await Context.Channel
+                                .SendErrorAsync($"{Context.User.Mention} You don't have enough {NadekoBot.BotConfig.CurrencyPluralName}. You only have {userFlowers}{NadekoBot.BotConfig.CurrencySign}.").ConfigureAwait(false);
                             return;
                         }
 
@@ -965,14 +979,7 @@ namespace NadekoBot.Modules.Custom
             if (!Game.PlayerExists(Context.User))
             {
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
-                    .WithDescription($"{Context.User.Mention} You aren't playing the game")).ConfigureAwait(false);
-                return;
-            }
-
-            if (Game.Players().Count() < Game.Config().MinimumPlayers)
-            {
-                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
-                    .WithDescription($"Less than minimum players active.")).ConfigureAwait(false);
+                    .WithDescription($"{Context.User.Mention} You have not joined yet. Do `u!join` to join the game.")).ConfigureAwait(false);
                 return;
             }
 
@@ -1518,14 +1525,14 @@ namespace NadekoBot.Modules.Custom
             if (!UnoChannel.IsGameActive(Context.Channel)) return;
 
             var Game = UnoChannel.GetGame(Context.Channel);
+            if (!Game.PlayerExists(Context.User)) return;
+
             if (Game.Players().Count() < Game.Config().MinimumPlayers)
             {
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
                     .WithDescription($"Less than minimum players active.")).ConfigureAwait(false);
                 return;
             }
-
-            if (!Game.PlayerExists(Context.User)) return;
 
             UnoPlayer plr = Game.GetPlayer(Context.User);
 
@@ -1570,13 +1577,6 @@ namespace NadekoBot.Modules.Custom
             if (!UnoChannel.IsGameActive(Context.Channel)) return;
 
             var Game = UnoChannel.GetGame(Context.Channel);
-            if (Game.Players().Count() < Game.Config().MinimumPlayers)
-            {
-                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
-                    .WithDescription($"Less than minimum players active.")).ConfigureAwait(false);
-                return;
-            }
-
             if (!Game.PlayerExists(Context.User))
             {
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
@@ -1584,6 +1584,14 @@ namespace NadekoBot.Modules.Custom
                     .ConfigureAwait(false);
                 return;
             }
+
+            if (Game.Players().Count() < Game.Config().MinimumPlayers)
+            {
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
+                    .WithDescription($"Less than minimum players active.")).ConfigureAwait(false);
+                return;
+            }
+
             var display_msg = new StringBuilder();
             var plr = Game.GetPlayer(Context.User);
 
