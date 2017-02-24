@@ -2184,6 +2184,15 @@ namespace NadekoBot.Resources {
         }
         
         /// <summary>
+        ///    Looks up a localized string similar to currentplayer cp.
+        /// </summary>
+        public static string currentplayer_cmd {
+            get {
+                return ResourceManager.GetString("currentplayer_cmd", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///    Looks up a localized string similar to danbooru.
         /// </summary>
         public static string danbooru_cmd {
@@ -3210,6 +3219,15 @@ namespace NadekoBot.Resources {
         }
         
         /// <summary>
+        ///    Looks up a localized string similar to hand.
+        /// </summary>
+        public static string hand_cmd {
+            get {
+                return ResourceManager.GetString("hand_cmd", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///    Looks up a localized string similar to hangman.
         /// </summary>
         public static string hangman_cmd {
@@ -3647,6 +3665,15 @@ namespace NadekoBot.Resources {
         public static string jcsc_usage {
             get {
                 return ResourceManager.GetString("jcsc_usage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to join.
+        /// </summary>
+        public static string join_cmd {
+            get {
+                return ResourceManager.GetString("join_cmd", resourceCulture);
             }
         }
         
@@ -4920,6 +4947,15 @@ namespace NadekoBot.Resources {
         }
         
         /// <summary>
+        ///    Looks up a localized string similar to nextplayer np.
+        /// </summary>
+        public static string nextplayer_cmd {
+            get {
+                return ResourceManager.GetString("nextplayer_cmd", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///    Looks up a localized string similar to nowplaying np.
         /// </summary>
         public static string nowplaying_cmd {
@@ -5429,6 +5465,15 @@ namespace NadekoBot.Resources {
         public static string pollstats_usage {
             get {
                 return ResourceManager.GetString("pollstats_usage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to previousplayer pp.
+        /// </summary>
+        public static string previousplayer_cmd {
+            get {
+                return ResourceManager.GetString("previousplayer_cmd", resourceCulture);
             }
         }
         
@@ -7206,6 +7251,15 @@ namespace NadekoBot.Resources {
         }
         
         /// <summary>
+        ///    Looks up a localized string similar to shuffle.
+        /// </summary>
+        public static string shuffle_cmd {
+            get {
+                return ResourceManager.GetString("shuffle_cmd", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///    Looks up a localized string similar to shuffle sh.
         /// </summary>
         public static string shuffledeck_cmd {
@@ -7256,6 +7310,15 @@ namespace NadekoBot.Resources {
         public static string shuffleplaylist_usage {
             get {
                 return ResourceManager.GetString("shuffleplaylist_usage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to skip.
+        /// </summary>
+        public static string skip_cmd {
+            get {
+                return ResourceManager.GetString("skip_cmd", resourceCulture);
             }
         }
         
@@ -7553,6 +7616,15 @@ namespace NadekoBot.Resources {
         public static string srvrmdl_usage {
             get {
                 return ResourceManager.GetString("srvrmdl_usage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to start.
+        /// </summary>
+        public static string start_cmd {
+            get {
+                return ResourceManager.GetString("start_cmd", resourceCulture);
             }
         }
         

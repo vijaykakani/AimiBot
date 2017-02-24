@@ -57,15 +57,15 @@ or
 ============ UNO =============
 ==============================
 
-u!start           or u!s           # Starts the UNO Game
-u!stop            or u!t           # Stops the UNO Game
-u!join <amount>   or u!j <amount>  # Joins the game and receives random cards from deck
-u!hand            or u!h           # Shows the cards in their hands (shown through DM)
-u!shuffle         or u!sh          # Shuffles the deck and adds the cards already used
-u!place           or u!p           # Places the matching cards out
-u!draw            or u!d           # Draw a card from the deck
-u!skip            or u!sk          # Skips the current player's turn
+u!start                            # Starts the UNO Game
+u!stop                             # Stops the UNO Game
+u!join <amount>                    # Joins the game and receives random cards from deck
+u!hand                             # Shows the cards in their hands (shown through DM)
+u!shuffle                          # Shuffles the deck and adds the cards already used
+u!place                            # Places the matching cards out
+u!draw                             # Draw a card from the deck
+u!skip                             # Skips the current player's turn
 u!nextplayer      or u!np          # Shows the next player
 u!currentplayer   or u!cp          # Shows the current player
 u!previousplayer  or u!pp          # Shows the previous player
-u!leave           or u!l           # Quit the player from playing the game
+u!leave                            # Quit the player from playing the game

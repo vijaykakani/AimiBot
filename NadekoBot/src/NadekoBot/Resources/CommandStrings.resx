@@ -3096,4 +3096,28 @@
   <data name="tags_usage" xml:space="preserve">
     <value>`{0}tags tag1 tag2 tag3 ...`</value>
   </data>
+  <data name="currentplayer_cmd" xml:space="preserve">
+    <value>currentplayer cp</value>
+  </data>
+  <data name="hand_cmd" xml:space="preserve">
+    <value>hand</value>
+  </data>
+  <data name="join_cmd" xml:space="preserve">
+    <value>join</value>
+  </data>
+  <data name="nextplayer_cmd" xml:space="preserve">
+    <value>nextplayer np</value>
+  </data>
+  <data name="previousplayer_cmd" xml:space="preserve">
+    <value>previousplayer pp</value>
+  </data>
+  <data name="shuffle_cmd" xml:space="preserve">
+    <value>shuffle</value>
+  </data>
+  <data name="skip_cmd" xml:space="preserve">
+    <value>skip</value>
+  </data>
+  <data name="start_cmd" xml:space="preserve">
+    <value>start</value>
+  </data>
 </root>
