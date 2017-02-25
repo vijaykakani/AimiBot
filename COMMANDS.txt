@@ -69,3 +69,4 @@ u!nextplayer      or u!np          # Shows the next player
 u!currentplayer   or u!cp          # Shows the current player
 u!previousplayer  or u!pp          # Shows the previous player
 u!leave                            # Quit the player from playing the game
+u!cards                            # shows the list of cards in deck, taken, placed and remaining

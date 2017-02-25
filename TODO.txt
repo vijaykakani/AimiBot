@@ -14,15 +14,17 @@
 
 >betcard or >bc ( COMPLETE )
 
-u!start                            # Starts the UNO Game
-u!stop                             # Stops the UNO Game
-u!join <amount>                    # Joins the game and receives random cards from deck
-u!hand                             # Shows the cards in their hands (shown through DM)
-u!shuffle                          # Shuffles the deck and adds the cards already used
-u!place                            # Places the matching cards out
-u!draw                             # Draw a card from the deck
-u!skip                             # Skips the current player's turn
-u!nextplayer      or u!np          # Shows the next player
-u!currentplayer   or u!cp          # Shows the current player
-u!previousplayer  or u!pp          # Shows the previous player
-u!leave                            # Quit the player from playing the game
+u!start                    ( COMPLETE )
+u!stop                     ( COMPLETE )
+u!join <bet amount>        ( COMPLETE )
+u!hand                     ( COMPLETE )
+u!shuffle                  ( COMPLETE )
+u!place                    ( COMPLETE )
+u!draw                     ( COMPLETE )
+u!skip                     ( COMPLETE )
+u!nextplayer      or u!np  ( COMPLETE )
+u!currentplayer   or u!cp  ( COMPLETE )
+u!previousplayer  or u!pp  ( COMPLETE )
+u!leave                    ( COMPLETE )
+u!cards                    ( COMPLETE )
+u!guide <type of card>     # Explains the usage of some cards and gives examples

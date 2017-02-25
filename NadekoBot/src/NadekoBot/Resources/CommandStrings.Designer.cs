@@ -1131,6 +1131,15 @@ namespace NadekoBot.Resources {
         }
         
         /// <summary>
+        ///    Looks up a localized string similar to cards.
+        /// </summary>
+        public static string cards_cmd {
+            get {
+                return ResourceManager.GetString("cards_cmd", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///    Looks up a localized string similar to cash $$.
         /// </summary>
         public static string cash_cmd {

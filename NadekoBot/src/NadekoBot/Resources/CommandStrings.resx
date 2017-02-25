@@ -3120,4 +3120,7 @@
   <data name="start_cmd" xml:space="preserve">
     <value>start</value>
   </data>
+  <data name="cards_cmd" xml:space="preserve">
+    <value>cards</value>
+  </data>
 </root>
