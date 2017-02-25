@@ -122,8 +122,8 @@ namespace NadekoBot.Modules.Custom
         {
             var str = new StringBuilder();
             str.AppendLine("`ID:` " + _cardID);
-            str.AppendLine("`Label:` " + _label.ToUpperInvariant() + " Card");
-            str.AppendLine("`Color:` " + _color);
+            str.AppendLine("`Label:` " + UnoChannel.FirstCharToUpper(_label) + " Card");
+            str.AppendLine("`Color:` " + UnoChannel.FirstCharToUpper(_color));
             if (sendImage)
             {
                 await usr.SendFileAsync(
@@ -135,6 +135,15 @@ namespace NadekoBot.Modules.Custom
             {
                 await usr.SendMessageAsync(str.ToString()).ConfigureAwait(false);
             }
+        }
+
+        public string GetInfo()
+        {
+            var str = new StringBuilder();
+            str.AppendLine("`ID:` " + _cardID);
+            str.AppendLine("`Label:` " + UnoChannel.FirstCharToUpper(_label) + " Card");
+            str.AppendLine("`Color:` " + UnoChannel.FirstCharToUpper(_color));
+            return str.ToString();
         }
 
         public void Reset()
@@ -194,32 +203,39 @@ namespace NadekoBot.Modules.Custom
             }
         }
 
-        public void ShowCards()
+        public async void ShowCards()
         {
+            var str = new StringBuilder();
             foreach (var card in _cards)
-                card.SendInfo(_user);
+                str.AppendLine(card.GetInfo());
+
+            await _user.SendMessageAsync(str.ToString());
         }
 
-        public void Draw()
+        public async void Draw(int times = 1)
         {
             _game.UpdateDeck();
 
-            if (_firstUnoCalled)
-                _firstUnoCalled = false;
+            var t = 0;
+            var str = new StringBuilder();
 
             foreach (var card in _game.Deck())
             {
                 if (card.CanUse())
                 {
+                    t++;
                     card.SetID(_cards.Count() + 1);
                     card.SetCardTaken(true);
-                    card.SendInfo(_user);
+                    str.AppendLine(card.GetInfo());
                     _cards.Add(card);
-                    break;
+
+                    if (t == times) break;
                 }
             }
 
             _alreadyDrawn = true;
+
+            await _user.SendConfirmAsync(str.ToString());
         }
 
         public void RemoveCard(UnoCard card)
@@ -692,6 +708,13 @@ namespace NadekoBot.Modules.Custom
             }
         }
 
+        public static string FirstCharToUpper(string input)
+        {
+            if (String.IsNullOrEmpty(input))
+                throw new ArgumentException("ARGH!");
+            return input.First().ToString().ToUpper() + input.Substring(1);
+        }
+
         public static bool IsGameActive(IMessageChannel ch)
         {
             var Game = GetGame(ch);
@@ -1013,7 +1036,7 @@ namespace NadekoBot.Modules.Custom
             if (plr != Game.CurrentPlayer())
             {
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
-                    .WithDescription($"{Context.User.Mention} Please wait. It isn't your turn to play yet.\nUse `u!currentplayer` or `u!cp` to see whos turn it is")).ConfigureAwait(false);
+                    .WithDescription($"{Context.User.Mention} Please wait. It isn't your turn yet.\nUse `u!currentplayer` or `u!cp` to see whos turn it is")).ConfigureAwait(false);
                 return;
             }
             
@@ -1372,14 +1395,35 @@ namespace NadekoBot.Modules.Custom
                         {
                             foreach (var card in plr.Cards())
                             {
-                                if (card.IsReverse())
+                                if (Game.IsGemeReversed())
+                                    Game.SetGameReversed(false);
+                                else
+                                    Game.SetGameReversed(true);
+
+                                do
                                 {
-                                    if (Game.IsGemeReversed())
-                                        Game.SetGameReversed(false);
+                                    //  the effect goes to the person after the chosen one
+                                    if (!Game.IsGemeReversed())
+                                        new_current_player = Game.SkipToPlayer(new_current_player_index, 0, true, ref new_current_player_index);
                                     else
-                                        Game.SetGameReversed(true);
+                                        new_current_player = Game.SkipToPlayer(new_current_player_index, 0, false, ref new_current_player_index);
                                 }
+                                while (new_current_player.FinishedUno());
                             }
+                        }
+
+                        if (Number || Plus2 || Skip)
+                        {
+                            do
+                            {
+                                if (!Game.IsGemeReversed())
+                                    new_current_player = Game.SkipToPlayer(
+                                    Game.CurrentPlayerIndex(), go_turns, true, ref new_current_player_index);
+                                else
+                                    new_current_player = Game.SkipToPlayer(
+                                    Game.CurrentPlayerIndex(), -go_turns, false, ref new_current_player_index);
+                            }
+                            while (new_current_player.FinishedUno());
                         }
                     }
 
@@ -1387,6 +1431,7 @@ namespace NadekoBot.Modules.Custom
                     foreach (var card in cards)
                     {
                         card.SetCardPlaced(true);
+                        card.SetCardTaken(false);
                         plr.RemoveCard(card);
                     }
 
@@ -1396,9 +1441,9 @@ namespace NadekoBot.Modules.Custom
                     for (var i = 0; i < cards.Count(); i++)
                     {
                         if ((i + 1) == cards.Count())
-                            file_msg.AppendLine($":arrow_forward: {cards[i].Label()}");
+                            file_msg.AppendLine($":arrow_forward: {UnoChannel.FirstCharToUpper(cards[i].Label())} ({UnoChannel.FirstCharToUpper(cards[i].Color())})");
                         else
-                            file_msg.AppendLine($":arrow_forward: {cards[i].Label()} 🔽");
+                            file_msg.AppendLine($":arrow_forward: {UnoChannel.FirstCharToUpper(cards[i].Label())} ({UnoChannel.FirstCharToUpper(cards[i].Color())}) 🔽");
                     }
 
                     await Context.Channel.SendFileAsync(
@@ -1434,33 +1479,18 @@ namespace NadekoBot.Modules.Custom
                         display_msg.AppendLine($"➤ {plr.User().Mention} reversed {no_reverse} times".ToString().SnPl(no_reverse));
                     }
 
-                    //  selecting the next player to continue the game from
-                    if ((new_current_player_index == -1) && (new_current_player == null))
-                    {
-                        do
-                        {
-                            if (!Game.IsGemeReversed())
-                                new_current_player = Game.SkipToPlayer(
-                                Game.CurrentPlayerIndex(), go_turns, true, ref new_current_player_index);
-                            else
-                                new_current_player = Game.SkipToPlayer(
-                                Game.CurrentPlayerIndex(), -go_turns, false, ref new_current_player_index);
-                        }
-                        while (new_current_player.FinishedUno());
-                    }
-
                     if (DrawCards > 0)
                     {
-                        await new_current_player.User().SendConfirmAsync($"**---- You Drew {DrawCards} UNO Card ----**").ConfigureAwait(false);
+                        await new_current_player.User()
+                            .SendConfirmAsync($"**---- You Drew {DrawCards} UNO CardS".ToString().SnPl(DrawCards) + " ----**").ConfigureAwait(false);
 
-                        if (new_current_player.FirstUnoCalled())
+                        if (new_current_player.FirstUnoCalled() && (DrawCards > 2))
                             new_current_player.SetFinishedUno(false);
 
                         display_msg.AppendLine($":scream: {plr.User().Mention} made {new_current_player.User().Mention} draw {DrawCards} cards");
-                    }
 
-                    for (int i = 0; i < DrawCards; i++)
-                        new_current_player.Draw();
+                        new_current_player.Draw(DrawCards);
+                    }
 
                     //  sets the new current player
                     Game.SetCurrentPlayer(new_current_player);
