@@ -3123,4 +3123,7 @@
   <data name="cards_cmd" xml:space="preserve">
     <value>cards</value>
   </data>
+  <data name="currentcard_cmd" xml:space="preserve">
+    <value>currentcard cc</value>
+  </data>
 </root>

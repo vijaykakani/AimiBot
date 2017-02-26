@@ -2193,6 +2193,15 @@ namespace NadekoBot.Resources {
         }
         
         /// <summary>
+        ///    Looks up a localized string similar to currentcard cc.
+        /// </summary>
+        public static string currentcard_cmd {
+            get {
+                return ResourceManager.GetString("currentcard_cmd", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///    Looks up a localized string similar to currentplayer cp.
         /// </summary>
         public static string currentplayer_cmd {

@@ -925,6 +925,24 @@ namespace NadekoBot.Modules.Custom
 
         [NadekoCommand, Usage, Description, Aliases]
         [RequireContext(ContextType.Guild)]
+        public async Task CurrentCard()
+        {
+            if (!UnoChannel.IsGameActive(Context.Channel))
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
+                    .WithDescription("Cannot see next player because the game is inactive")).ConfigureAwait(false);
+            else
+            {
+                var Game = UnoChannel.GetGame(Context.Channel);
+
+                await Context.Channel.SendFileAsync(
+                                        File.Open(Game.LastPlacedCard().ImagePath(), FileMode.OpenOrCreate),
+                                        new FileInfo(Game.LastPlacedCard().ImagePath()).Name, "Last placed card.")
+                                        .ConfigureAwait(false);
+            }
+        }
+
+        [NadekoCommand, Usage, Description, Aliases]
+        [RequireContext(ContextType.Guild)]
         public async Task Join(int bet = 0)
         {
             if (!UnoChannel.IsGameActive(Context.Channel))
@@ -993,6 +1011,7 @@ namespace NadekoBot.Modules.Custom
                 {
                     var diff = Game.Config().MinimumPlayers - Game.Players().Count();
                     display_msg.AppendLine($"\n{diff} more players".ToString().SnPl(diff) + " to join before the game can start.");
+                    display_msg.AppendLine($"\nType `u!join` to join the game.");
                 }
                 else
                     display_msg.AppendLine($"\nLet the game begin.");
@@ -1771,6 +1790,22 @@ namespace NadekoBot.Modules.Custom
             str.AppendLine($"Remain: {count_remain}");
 
             await Context.Channel.SendConfirmAsync($"**Uno**\n*List of cards in deck*\n```{str.ToString()}\n```").ConfigureAwait(false);
+        }
+
+        [NadekoCommand, Usage, Description, Aliases]
+        [RequireContext(ContextType.Guild)]
+        public async Task Cmds(string param = null)
+        {// TODO
+            var str = new StringBuilder();
+
+        }
+
+        [NadekoCommand, Usage, Description, Aliases]
+        [RequireContext(ContextType.Guild)]
+        public async Task Rules(string param = null)
+        {// TODO
+            var str = new StringBuilder();
+
         }
     }
 }
