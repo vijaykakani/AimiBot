@@ -32,6 +32,8 @@ namespace NadekoBot.Modules.Custom
         public int MinimumPlayers { get; set; } = 2;
         public int MaximumPlayers { get; set; } = 6;
 
+        public int MinimumBetAmount { get; set; } = 50;
+        public int MaximumBetAmount { get; set; } = 500;
         public int BetMultiplier { get; set; } = 2;
 
         public int CardsPerPlayer { get; set; } = 7;
@@ -234,6 +236,7 @@ namespace NadekoBot.Modules.Custom
             }
 
             _alreadyDrawn = true;
+            _firstUnoCalled = false;
 
             await _user.SendMessageAsync(str.ToString());
         }
@@ -279,9 +282,10 @@ namespace NadekoBot.Modules.Custom
         private int _startingPlayerIndex = -1;
         private int _playersFinishedOrder = -1;
 
-        private bool _gameRunning = false;
+        private bool _isGameRunning = false;
         private bool _isGameReversed = false;
         private bool _isWinnerDeclared = false;
+        private bool _isBetActive = false;
 
         public List<UnoPlayer> Players() { return _players; }
         public List<UnoCard> Deck() { return _deck; }
@@ -297,14 +301,17 @@ namespace NadekoBot.Modules.Custom
         public UnoConfig Config() { return _config; }
         public void SetConfig(UnoConfig config) { _config = config; }
 
-        public bool IsGameRunning() { return _gameRunning; }
-        public void SetGameRunning(bool val) { _gameRunning = val; }
+        public bool IsGameRunning() { return _isGameRunning; }
+        public void SetGameRunning(bool val) { _isGameRunning = val; }
 
         public bool IsGemeReversed() { return _isGameReversed; }
         public void SetGameReversed(bool val) { _isGameReversed = val; }
         
         public bool IsWinnerDeclared() { return _isWinnerDeclared; }
         public void SetWinnerDeclared(bool val) { _isWinnerDeclared = val; }
+
+        public bool IsBetActive() { return _isBetActive; }
+        public void SetBetActive(bool val) { _isBetActive = val; }
 
         public UnoPlayer CurrentPlayer() { return _currentPlayer; }
         public int CurrentPlayerIndex() { return _currentPlayerIndex; }
@@ -469,8 +476,6 @@ namespace NadekoBot.Modules.Custom
 
         public void Start()
         {
-            _gameRunning = true;
-
             _players = new List<UnoPlayer>();
 
             LoadCards();
@@ -479,6 +484,9 @@ namespace NadekoBot.Modules.Custom
 
         public async void Update()
         {
+            //  do not process further until the game is running
+            if (!_isGameRunning) return;
+
             if (NoPlayers() || (_players.Count() < _config.MinimumPlayers))
             {
                 await _channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
@@ -515,6 +523,13 @@ namespace NadekoBot.Modules.Custom
                     Reset();
                     return;
                 }
+
+                //  ensure that all players have bet
+                //  and if one or many players did not bet
+                //  deactivate the betting system
+                foreach (var plr in _players)
+                    if (plr.Bet() == 0)
+                        _isBetActive = false;
 
                 UpdateDeck();
 
@@ -608,9 +623,10 @@ namespace NadekoBot.Modules.Custom
             _startingPlayerIndex = -1;
             _playersFinishedOrder = -1;
 
-            _gameRunning = false;
+            _isGameRunning = false;
             _isGameReversed = false;
             _isWinnerDeclared = false;
+            _isBetActive = false;
         }
 
         public bool PlayerExists(IUser usr)
@@ -715,10 +731,10 @@ namespace NadekoBot.Modules.Custom
             return input.First().ToString().ToUpper() + input.Substring(1);
         }
 
-        public static bool IsGameActive(IMessageChannel ch)
+        public static bool IsGameActive(IMessageChannel Channel)
         {
-            var Game = GetGame(ch);
-            if (!DoesGameChannelExist(ch) || !Game.IsGameRunning())
+            var Game = GetGame(Channel);
+            if (!DoesGameChannelExist(Channel) || !Game.IsGameRunning())
                 return false;
             return true;
         }
@@ -817,12 +833,12 @@ namespace NadekoBot.Modules.Custom
         [RequireContext(ContextType.Guild)]
         public async Task Stop()
         {
-            if (!UnoChannel.IsGameActive(Context.Channel))
+            var Game = UnoChannel.GetGame(Context.Channel);
+            if (!UnoChannel.DoesGameChannelExist(Context.Channel) || !Game.IsGameRunning())
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
                     .WithDescription("The game is not running. Type `u!start` to run it")).ConfigureAwait(false);
             else
             {
-                var Game = UnoChannel.GetGame(Context.Channel);
                 if (!Game.PlayerExists(Context.User))
                 {
                     await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
@@ -839,7 +855,7 @@ namespace NadekoBot.Modules.Custom
         [RequireContext(ContextType.Guild)]
         public async Task Shuffle()
         {
-            if (!UnoChannel.IsGameActive(Context.Channel))
+            if (!UnoChannel.DoesGameChannelExist(Context.Channel))
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
                     .WithDescription("Cannot shuffle deck when the game isn't running")).ConfigureAwait(false);
             else
@@ -863,7 +879,7 @@ namespace NadekoBot.Modules.Custom
         [RequireContext(ContextType.Guild)]
         public async Task NextPlayer()
         {
-            if (!UnoChannel.IsGameActive(Context.Channel))
+            if (!UnoChannel.DoesGameChannelExist(Context.Channel))
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
                     .WithDescription("Cannot see next player because the game is inactive")).ConfigureAwait(false);
             else
@@ -886,7 +902,7 @@ namespace NadekoBot.Modules.Custom
         [RequireContext(ContextType.Guild)]
         public async Task CurrentPlayer()
         {
-            if (!UnoChannel.IsGameActive(Context.Channel))
+            if (!UnoChannel.DoesGameChannelExist(Context.Channel))
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
                     .WithDescription("Cannot see the current player because the game is inactive")).ConfigureAwait(false);
             else
@@ -908,7 +924,7 @@ namespace NadekoBot.Modules.Custom
         [RequireContext(ContextType.Guild)]
         public async Task PreviousPlayer()
         {
-            if (!UnoChannel.IsGameActive(Context.Channel))
+            if (!UnoChannel.DoesGameChannelExist(Context.Channel))
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
                     .WithDescription("Cannot see next player because the game is inactive")).ConfigureAwait(false);
             else
@@ -931,7 +947,7 @@ namespace NadekoBot.Modules.Custom
         [RequireContext(ContextType.Guild)]
         public async Task CurrentCard()
         {
-            if (!UnoChannel.IsGameActive(Context.Channel))
+            if (!UnoChannel.DoesGameChannelExist(Context.Channel))
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
                     .WithDescription("Cannot see next player because the game is inactive")).ConfigureAwait(false);
             else
@@ -949,82 +965,97 @@ namespace NadekoBot.Modules.Custom
         [RequireContext(ContextType.Guild)]
         public async Task Join(int bet = 0)
         {
-            if (!UnoChannel.IsGameActive(Context.Channel))
+            if (!UnoChannel.DoesGameChannelExist(Context.Channel))
+            {
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithErrorColor()
                     .WithDescription("Cannot join when the game is not running. To run the game, use: `u!start`")).ConfigureAwait(false);
-            else
-            {
-                var Game = UnoChannel.GetGame(Context.Channel);
-                var display_msg = new StringBuilder();
-
-                if (Game.Players().Count() == Game.Config().MaximumPlayers)
-                {
-                    await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithErrorColor()
-                    .WithDescription($"Cannot join because the maximum amount of {Game.Config().MaximumPlayers} players have already joined"))
-                    .ConfigureAwait(false);
-                    return;
-                }
-
-                if (Game.PlayerExists(Context.User))
-                {
-                    await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithErrorColor()
-                        .WithDescription($"{Context.User.Mention} You are already playing")).ConfigureAwait(false);
-                    return;
-                }
-
-                Game.HandCardsOut(Context.User);
-                display_msg.AppendLine($"{Context.User.Mention} joined the game\n");
-
-                display_msg.AppendLine("To check the cards in your hand, use `u!hand`");
-                display_msg.AppendLine("To see the rules of the game, use `u!rules`");
-                display_msg.AppendLine("To see the list of all Uno Commands, use `u!cmds`");
-
-                UnoPlayer plr = Game.GetPlayer(Context.User);
-
-                if ((Game.CurrentPlayerIndex() == -1) && (Game.GetStartingPlayerIndex() == -1))
-                {
-                    Game.SetCurrentPlayer(plr);
-                    Game.SetCurrentPlayerIndex(0);
-                    Game.SetStartingPlayerIndex(0);
-
-                    display_msg.AppendLine($"\n{Context.User.Mention} is the starting player");
-                }
-
-                if (bet > 0)
-                {
-                    if (bet < NadekoBot.BotConfig.MinimumBetAmount)
-                    {
-                        await Context.Channel.SendErrorAsync($"You can't bet less than {NadekoBot.BotConfig.MinimumBetAmount}{NadekoBot.BotConfig.CurrencySign}")
-                                        .ConfigureAwait(false);
-                        return;
-                    }
-
-                    long userFlowers;
-                    using (var uow = DbHandler.UnitOfWork())
-                    {
-                        userFlowers = uow.Currency.GetOrCreate(Context.User.Id).Amount;
-                    }
-
-                    if (userFlowers < bet)
-                    {
-                        await Context.Channel
-                            .SendErrorAsync($"{Context.User.Mention} You don't have enough {NadekoBot.BotConfig.CurrencyPluralName}. You only have {userFlowers}{NadekoBot.BotConfig.CurrencySign}").ConfigureAwait(false);
-                        return;
-                    }
-
-                    plr.SetBet(bet);
-                }
-
-                if (Game.Players().Count() < Game.Config().MinimumPlayers)
-                {
-                    var diff = Game.Config().MinimumPlayers - Game.Players().Count();
-                    display_msg.AppendLine($"\nWaiting for `{diff}` more players".ToString().SnPl(diff) + " to join before the game can start.");
-                }
-                else
-                    display_msg.AppendLine($"\nLet the game begin.");
-
-                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithOkColor().WithDescription(display_msg.ToString())).ConfigureAwait(false);
+                return;
             }
+
+            var Game = UnoChannel.GetGame(Context.Channel);
+            var display_msg = new StringBuilder();
+
+            if (Game.Players().Count() == Game.Config().MaximumPlayers)
+            {
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithErrorColor()
+                .WithDescription($"Cannot join because the maximum amount of {Game.Config().MaximumPlayers} players have already joined"))
+                .ConfigureAwait(false);
+                return;
+            }
+
+            if (Game.PlayerExists(Context.User))
+            {
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithErrorColor()
+                    .WithDescription($"{Context.User.Mention} You are already playing")).ConfigureAwait(false);
+                return;
+            }
+
+            Game.HandCardsOut(Context.User);
+            display_msg.AppendLine($"{Context.User.Mention} joined the game\n");
+
+            display_msg.AppendLine("To check the cards in your hand, use `u!hand`");
+            display_msg.AppendLine("To see the rules of the game, use `u!rules`");
+            display_msg.AppendLine("To see the list of all Uno Commands, use `u!cmds`");
+
+            UnoPlayer plr = Game.GetPlayer(Context.User);
+
+            //  set the starting player
+            if ((Game.CurrentPlayerIndex() == -1) && (Game.GetStartingPlayerIndex() == -1))
+            {
+                Game.SetCurrentPlayer(plr);
+                Game.SetCurrentPlayerIndex(0);
+                Game.SetStartingPlayerIndex(0);
+
+                display_msg.AppendLine($"\n{Context.User.Mention} is the starting player");
+            }
+
+            if (bet > 0)
+            {
+                if (bet < Game.Config().MinimumBetAmount)
+                {
+                    await Context.Channel.SendErrorAsync($"You can't bet less than {Game.Config().MinimumBetAmount}{NadekoBot.BotConfig.CurrencySign}")
+                                    .ConfigureAwait(false);
+                    return;
+                }
+
+                if (bet > Game.Config().MaximumBetAmount)
+                {
+                    await Context.Channel.SendErrorAsync($"You can't bet more than {Game.Config().MaximumBetAmount}{NadekoBot.BotConfig.CurrencySign}")
+                                    .ConfigureAwait(false);
+                    return;
+                }
+
+                long userFlowers;
+                using (var uow = DbHandler.UnitOfWork())
+                {
+                    userFlowers = uow.Currency.GetOrCreate(Context.User.Id).Amount;
+                }
+
+                if (userFlowers < bet)
+                {
+                    await Context.Channel
+                        .SendErrorAsync($"{Context.User.Mention} You don't have enough {NadekoBot.BotConfig.CurrencyPluralName}. You only have {userFlowers}{NadekoBot.BotConfig.CurrencySign}").ConfigureAwait(false);
+                    return;
+                }
+
+                plr.SetBet(bet);
+                Game.SetBetActive(true);
+            }
+
+            if (Game.Players().Count() < Game.Config().MinimumPlayers)
+            {
+                var diff = Game.Config().MinimumPlayers - Game.Players().Count();
+                display_msg.AppendLine($"\nWaiting for `{diff}` more players".ToString().SnPl(diff) + " to join before the game can start.");
+            }
+            else if ((Game.Players().Count() >= Game.Config().MinimumPlayers) && !Game.IsGameRunning())
+            {
+                display_msg.AppendLine($"\nLet the game begin.");
+                Game.SetGameRunning(true);
+            }
+
+            Game.Update();
+
+            await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithOkColor().WithDescription(display_msg.ToString())).ConfigureAwait(false);
         }
 
         [NadekoCommand, Usage, Description, Aliases]
@@ -1428,7 +1459,7 @@ namespace NadekoBot.Modules.Custom
                     {
                         if (Reverse)
                         {
-                            foreach (var card in plr.Cards())
+                            foreach (var card in cards)
                             {
                                 if (Game.IsGemeReversed())
                                     Game.SetGameReversed(false);
@@ -1518,9 +1549,6 @@ namespace NadekoBot.Modules.Custom
                         await new_current_player.User()
                             .SendConfirmAsync($"**---- You Drew {DrawCards} UNO Cards".ToString().SnPl(DrawCards) + " ----**").ConfigureAwait(false);
 
-                        if (new_current_player.FirstUnoCalled() && (DrawCards > 2))
-                            new_current_player.SetFinishedUno(false);
-
                         display_msg.AppendLine($":scream: {plr.User().Mention} made {new_current_player.User().Mention} draw {DrawCards} cards");
 
                         new_current_player.Draw(DrawCards);
@@ -1553,21 +1581,23 @@ namespace NadekoBot.Modules.Custom
                         plr.SetFirstUnoCalled(true);
                         display_msg.AppendLine($"⛳ {plr.User().Mention} called UNO! One card remaining!");
                     }
-
+                    
                     //  Checks for bets and processes them when the player finish order reaches 1
-                    if ((Game.PlayersFinishedOrder() == 1) || (!Game.Config().GameMode && Game.IsWinnerDeclared()))
+                    if (Game.IsBetActive() && 
+                        ((Game.Config().GameMode && (Game.PlayersFinishedOrder() == 1)) || (!Game.Config().GameMode && Game.IsWinnerDeclared()))
+                        )
                     {
                         foreach (var s_plr in Game.Players())
                         {
                             if (s_plr.Bet() > 0)
                             {
-                                await CurrencyHandler.RemoveCurrencyAsync(Context.User, "Uno Bet", s_plr.Bet(), false).ConfigureAwait(false);
+                                await CurrencyHandler.RemoveCurrencyAsync(s_plr.User(), "Uno Bet", s_plr.Bet(), false).ConfigureAwait(false);
 
                                 if (s_plr == plr)
                                 {
                                     var award = s_plr.Bet() * Game.Config().BetMultiplier;
                                     display_msg.AppendLine($"{s_plr.User().Mention} has won their bet! They received {award}{NadekoBot.BotConfig.CurrencySign}");
-                                    await CurrencyHandler.AddCurrencyAsync(Context.User, "Uno Bet", award, false).ConfigureAwait(false);
+                                    await CurrencyHandler.AddCurrencyAsync(s_plr.User(), "Uno Bet", award, false).ConfigureAwait(false);
                                 }
                                 else
                                 {
@@ -1765,6 +1795,10 @@ namespace NadekoBot.Modules.Custom
 
             UnoPlayer plr = Game.GetPlayer(Context.User);
             plr.Leave();
+
+            //  remove the leaving player's bet
+            if (Game.IsBetActive() && (plr.Bet() > 0))
+                await CurrencyHandler.RemoveCurrencyAsync(plr.User(), "Uno Bet", plr.Bet(), false).ConfigureAwait(false);
 
             await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithOkColor()
                 .WithDescription($"{Context.User.Mention} left the game")).ConfigureAwait(false);
