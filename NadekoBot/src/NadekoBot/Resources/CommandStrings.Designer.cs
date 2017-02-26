@@ -1815,6 +1815,15 @@ namespace NadekoBot.Resources {
         }
         
         /// <summary>
+        ///    Looks up a localized string similar to cmds.
+        /// </summary>
+        public static string cmds_cmd {
+            get {
+                return ResourceManager.GetString("cmds_cmd", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///    Looks up a localized string similar to color clr.
         /// </summary>
         public static string color_cmd {
@@ -6572,6 +6581,15 @@ namespace NadekoBot.Resources {
         public static string rule34_usage {
             get {
                 return ResourceManager.GetString("rule34_usage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///    Looks up a localized string similar to rules.
+        /// </summary>
+        public static string rules_cmd {
+            get {
+                return ResourceManager.GetString("rules_cmd", resourceCulture);
             }
         }
         

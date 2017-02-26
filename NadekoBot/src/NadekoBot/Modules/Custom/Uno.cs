@@ -221,7 +221,7 @@ namespace NadekoBot.Modules.Custom
 
             foreach (var card in _game.Deck())
             {
-                if (card.CanUse())
+                if (card.CanUse()/* && ((card.Color()== "red") || card.IsStarCard())*/)
                 {
                     t++;
                     card.SetID(_cards.Count() + 1);
@@ -536,7 +536,7 @@ namespace NadekoBot.Modules.Custom
 
             foreach (var card in _deck)
             {
-                if (card.CanUse())
+                if (card.CanUse()/* && ((card.Color() == "red") || card.IsStarCard())*/)
                 {
                     id++;
                     card.SetID(id);
@@ -761,7 +761,7 @@ namespace NadekoBot.Modules.Custom
             try
             {
                 if (GameChannel.Game().IsGameRunning())
-                    display_msg.AppendLine($"The game is already running. Join the game `u!join` to play");
+                    display_msg.AppendLine($"The game is already running.");
                 else
                 {
                     try
@@ -776,13 +776,13 @@ namespace NadekoBot.Modules.Custom
                     try
                     {
                         UnoCard placementCard = GameChannel.Game().GetRandomCard();
-                        while (placementCard.IsActionCard() || placementCard.IsStarCard())
+                        while (placementCard.IsActionCard() || placementCard.IsStarCard()/* || (placementCard.Color() != "red")*/)
                             placementCard = GameChannel.Game().GetRandomCard();
                         placementCard.SetCardPlaced(true);
 
                         await Context.Channel.SendFileAsync(
                                         File.Open(placementCard.ImagePath(), FileMode.OpenOrCreate),
-                                        new FileInfo(placementCard.ImagePath()).Name, "First Card Placed!")
+                                        new FileInfo(placementCard.ImagePath()).Name, "First Card Placed:")
                                             .ConfigureAwait(false);
 
                         GameChannel.Game().SetLastPlacedCard(placementCard);
@@ -796,6 +796,10 @@ namespace NadekoBot.Modules.Custom
                     display_msg.AppendLine("Game paused.");
                     display_msg.Append($"Waiting for a minimum of `{GameChannel.Game().Config().MinimumPlayers} players` to join so the game can be played.");
                 }
+
+                display_msg.AppendLine("To join the game, use `u!join` and if you want to bet, use `u!join BetAmount`");
+                display_msg.AppendLine("To see the rules of the game, use `u!rules`");
+                display_msg.AppendLine("To see the list of all Uno Commands, use `u!cmds`");
             }
             catch (Exception ex)
             {
@@ -936,7 +940,7 @@ namespace NadekoBot.Modules.Custom
 
                 await Context.Channel.SendFileAsync(
                                         File.Open(Game.LastPlacedCard().ImagePath(), FileMode.OpenOrCreate),
-                                        new FileInfo(Game.LastPlacedCard().ImagePath()).Name, "Last placed card.")
+                                        new FileInfo(Game.LastPlacedCard().ImagePath()).Name, "Last placed card:")
                                         .ConfigureAwait(false);
             }
         }
@@ -946,7 +950,7 @@ namespace NadekoBot.Modules.Custom
         public async Task Join(int bet = 0)
         {
             if (!UnoChannel.IsGameActive(Context.Channel))
-                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithErrorColor()
                     .WithDescription("Cannot join when the game is not running. To run the game, use: `u!start`")).ConfigureAwait(false);
             else
             {
@@ -955,7 +959,7 @@ namespace NadekoBot.Modules.Custom
 
                 if (Game.Players().Count() == Game.Config().MaximumPlayers)
                 {
-                    await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
+                    await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithErrorColor()
                     .WithDescription($"Cannot join because the maximum amount of {Game.Config().MaximumPlayers} players have already joined"))
                     .ConfigureAwait(false);
                     return;
@@ -969,7 +973,11 @@ namespace NadekoBot.Modules.Custom
                 }
 
                 Game.HandCardsOut(Context.User);
-                display_msg.AppendLine($"{Context.User.Mention} joined the game. Check your cards by doing `u!hand`");
+                display_msg.AppendLine($"{Context.User.Mention} joined the game\n");
+
+                display_msg.AppendLine("To check the cards in your hand, use `u!hand`");
+                display_msg.AppendLine("To see the rules of the game, use `u!rules`");
+                display_msg.AppendLine("To see the list of all Uno Commands, use `u!cmds`");
 
                 UnoPlayer plr = Game.GetPlayer(Context.User);
 
@@ -979,7 +987,7 @@ namespace NadekoBot.Modules.Custom
                     Game.SetCurrentPlayerIndex(0);
                     Game.SetStartingPlayerIndex(0);
 
-                    display_msg.AppendLine($"{Context.User.Mention} is the starting player");
+                    display_msg.AppendLine($"\n{Context.User.Mention} is the starting player");
                 }
 
                 if (bet > 0)
@@ -1010,8 +1018,7 @@ namespace NadekoBot.Modules.Custom
                 if (Game.Players().Count() < Game.Config().MinimumPlayers)
                 {
                     var diff = Game.Config().MinimumPlayers - Game.Players().Count();
-                    display_msg.AppendLine($"\n{diff} more players".ToString().SnPl(diff) + " to join before the game can start.");
-                    display_msg.AppendLine($"\nType `u!join` to join the game.");
+                    display_msg.AppendLine($"\nWaiting for `{diff}` more players".ToString().SnPl(diff) + " to join before the game can start.");
                 }
                 else
                     display_msg.AppendLine($"\nLet the game begin.");
@@ -1343,6 +1350,7 @@ namespace NadekoBot.Modules.Custom
                         go_turns = no_skip;
 
                     new_current_player_index = Game.CurrentPlayerIndex();
+                    new_current_player = Game.CurrentPlayer();
 
                     //  CARD PROCESS PROCEDURE:
                     //  If Wild:
@@ -1386,6 +1394,14 @@ namespace NadekoBot.Modules.Custom
                                 }
                                 while (new_current_player.FinishedUno());
                             }
+                        }
+
+                        if (Number && !Skip && !Reverse)
+                        {
+                            if (!Game.IsGemeReversed())
+                                new_current_player = Game.SkipToPlayer(new_current_player_index, 0, true, ref new_current_player_index);
+                            else
+                                new_current_player = Game.SkipToPlayer(new_current_player_index, 0, false, ref new_current_player_index);
                         }
                     }
 
@@ -1500,7 +1516,7 @@ namespace NadekoBot.Modules.Custom
                     if (DrawCards > 0)
                     {
                         await new_current_player.User()
-                            .SendConfirmAsync($"**---- You Drew {DrawCards} UNO CardS".ToString().SnPl(DrawCards) + " ----**").ConfigureAwait(false);
+                            .SendConfirmAsync($"**---- You Drew {DrawCards} UNO Cards".ToString().SnPl(DrawCards) + " ----**").ConfigureAwait(false);
 
                         if (new_current_player.FirstUnoCalled() && (DrawCards > 2))
                             new_current_player.SetFinishedUno(false);
@@ -1637,13 +1653,15 @@ namespace NadekoBot.Modules.Custom
                 .WithDescription($"⏩ {Context.User.Mention} skipped their turn")).ConfigureAwait(false);
 
             int next_current_player_index = Game.CurrentPlayerIndex();
-            UnoPlayer new_current_player = null;
-            if (!Game.IsGemeReversed())
-                new_current_player = Game.SkipToPlayer(
-                Game.CurrentPlayerIndex(), 0, true, ref next_current_player_index);
-            else
-                new_current_player = Game.SkipToPlayer(
-                Game.CurrentPlayerIndex(), 0, false, ref next_current_player_index);
+            UnoPlayer new_current_player = Game.CurrentPlayer();
+            do
+            {
+                if (!Game.IsGemeReversed())
+                    new_current_player = Game.SkipToPlayer(next_current_player_index, 0, true, ref next_current_player_index);
+                else
+                    new_current_player = Game.SkipToPlayer(next_current_player_index, 0, false, ref next_current_player_index);
+            }
+            while (new_current_player.FinishedUno());
 
             Game.SetCurrentPlayer(new_current_player);
             Game.SetCurrentPlayerIndex(next_current_player_index);
@@ -1795,17 +1813,152 @@ namespace NadekoBot.Modules.Custom
         [NadekoCommand, Usage, Description, Aliases]
         [RequireContext(ContextType.Guild)]
         public async Task Cmds(string param = null)
-        {// TODO
+        {
             var str = new StringBuilder();
-
+            str.AppendLine("**__List of Commands__**\n");
+            str.AppendLine("All commands have a prefix of `u!` (for example: u!start)\n");
+            str.AppendLine("`start` — Starts the game");
+            str.AppendLine("`stop` — Stops the game");
+            str.AppendLine("`join` — Joins the game\n`u!join <bet amount>` — Bets the amount that multiplies for finishing 1st");
+            str.AppendLine("`hand` — Shows the cards in your hand");
+            str.AppendLine("`place CardID` — Places the cards by their ids");
+            str.AppendLine("`shuffle` — Shuffles the deck");
+            str.AppendLine("`cards` — Shows the cards in deck, taken, placed and remaining");
+            str.AppendLine("`currentcard` or `cc` — Shows the last card placed");
+            str.AppendLine("`draw` — Draw a card from the deck");
+            str.AppendLine("`skip` — Skips your turn");
+            str.AppendLine("`nextplayer` or `np` — Shows the next player");
+            str.AppendLine("`currentplayer` or `cp` — Shows the current player");
+            str.AppendLine("`previousplayer` or `pp` — Shows the previous player");
+            str.AppendLine("`leave` — Leaves the game");
+            str.AppendLine("`rules` — See the list of rules");
+            await Context.User.SendConfirmAsync(str.ToString());
         }
 
         [NadekoCommand, Usage, Description, Aliases]
         [RequireContext(ContextType.Guild)]
         public async Task Rules(string param = null)
-        {// TODO
+        {
             var str = new StringBuilder();
+            str.AppendLine("**Uno Rules**\n");
 
+            if (string.IsNullOrWhiteSpace(param))
+            {
+                str.AppendLine("You can use `u!cmds` to see the list of Uno Commands.\n");
+
+                str.AppendLine($"A minimum of 2 players must join in order to play the game.");
+                str.AppendLine($"A maximum of 6 players are allowed to play the game.");
+                str.AppendLine($"Each player gets 7 cards from a deck of 108 cards.");
+                str.AppendLine($"Players can view the cards in their hands using `u!hand`");
+                str.AppendLine($"Players can place selected cards using the ids: u!place CardID1 CardID2 ...");
+                str.AppendLine($"Players can only draw 1 card per turn.");
+                str.AppendLine($"If the player is unable to place a matching card, they must use `u!draw` and `u!skip` to pass the turn onto the next player.");
+
+                str.AppendLine("For specific rules for a card, do `u!rules CardName` (for example: u!rules p4)");
+                str.AppendLine("Players placing a card must match its label or color with the last card placed unless it is a Wild/Plus 4 Card\n");
+
+                str.AppendLine("CardName can be in the following below:");
+                str.AppendLine("```");
+                str.AppendLine("n  — Number Card");
+                str.AppendLine("r  — Reverse Card");
+                str.AppendLine("s  — Skip Card");
+                str.AppendLine("w  — Wild Card");
+                str.AppendLine("p2 — Plus 2 Card");
+                str.AppendLine("p4 — Plus 4 Card");
+                str.AppendLine("```");
+            }
+            else
+            {
+                switch (param.Trim().ToLowerInvariant())
+                {
+                    case "n":
+                        str.AppendLine("*Explaining Number Cards*\n");
+                        str.AppendLine("You can place any number of \"Number\" cards of same or different colors with matching labels.\n");
+                        str.AppendLine("__Example 1:__ You have `9 Blue` and `9 Blue`\n`9 Blue` > `9 Blue` because they have matching labels\n");
+                        str.AppendLine("__Example 2:__ You have `9 Blue` and `9 Red`\n`9 Blue` > `9 Red` because the Blue and Red cards match in labels\n");
+                        str.AppendLine("__Example 3:__ You have `9 Blue`, `8 Blue`\nYou can only choose one of the cards to place. Choose wisely.\n");
+                        str.AppendLine("__Example 4:__ If the last card placed is a `9 Blue`, the next player has to place cards that matche that color or label\n");
+                        break;
+
+                    case "r":
+                        str.AppendLine("*Explaining Reverse Cards*\n");
+                        str.AppendLine("You can place any number of \"Reverse\" cards of same or different colors with matching labels.");
+                        str.AppendLine("Remember that placing two set of \"reverse\" cards returns the turn back to you again.\n");
+                        str.AppendLine("__Example 1:__ You have `Reverse Blue` and `Reverse Blue`\n`Reverse Blue` > `Reverse Blue` because they have matching labels and colors\n");
+                        str.AppendLine("__Example 2:__ You have `Reverse Blue` and `Reverse Red`\n`Reverse Blue` > `Reverse Red` because they have matching labels\n");
+                        str.AppendLine("__Example 3:__ If you place `Reverse Blue` and `Reverse Red`\nThe flow of the turns return to normal and it becomes the next players' turn\n");
+                        str.AppendLine("__Example 4:__ If the last card placed is a `Reverse Blue`, the next player has to place cards that matche that color or label\n");
+                        break;
+
+                    case "s":
+                        str.AppendLine("*Explaining Skip Cards*\n");
+                        str.AppendLine("You can place any number of \"Skip\" cards of same or different colors with matching labels.");
+                        str.AppendLine("Each skip card placed counts as a turn skipped.\n");
+                        str.AppendLine("__Example 1:__ Placing one `Skip Card` means that only one turn is skipped\n");
+                        str.AppendLine("__Example 2:__ Placing two `Skip Cards` means that two turns got skipped\n");
+                        str.AppendLine("__Example 3:__ Placing four `Skip Cards` means that four turns got skipped\n");
+                        str.AppendLine("__Example 4:__ If the last card placed is a `Skip Blue`, the next player has to place cards that matche that color or label\n");
+                        break;
+
+                    case "p2":
+                        str.AppendLine("*Explaining Plus 2 Cards*\n");
+                        str.AppendLine("You can place any number of \"Plus 2\" cards of same or different colors with matching labels.");
+                        str.AppendLine("Each plus 2 card placed makes the target player draw 2 more cards.\n");
+                        str.AppendLine("__Example 1:__ Placing one `Plus 2 Card` means that the target player only draws 2 cards\n");
+                        str.AppendLine("__Example 2:__ Placing two `Plus 2 Cards` means that the target player draws 4 cards\n");
+                        str.AppendLine("__Example 3:__ Placing four `Plus 2 Cards` means that the target player draws 8 cards\n");
+                        str.AppendLine("__Example 4:__ If the last card placed is a `Plus 2 Blue`, the next player has to place cards that matche that color or label\n");
+                        break;
+
+                    case "w":
+                        str.AppendLine("*Explaining Wild Cards*\n");
+                        str.AppendLine("You can place only one of the \"Wild\" card per turn.");
+                        str.AppendLine("It doesn't matter what the last placed card is when it's a wild card that's going to be placed next.");
+                        str.AppendLine("You are allowed to place any number of `Skip`, `Reverse` and `Plus 2` cards.");
+                        str.AppendLine("The flow of the game gets affected by how the `Skip` and `Reverse`cards are positioned upon placement.");
+                        str.AppendLine("A Wild card must end with one or multiple Numer Cards of the same label with same or different colors.\n");
+                        str.AppendLine("__Example 1:__ Placing `Wild` > `Skip` > `9 Blue`\nOne turn will be skipped and the last card placed becomes 9 Blue.\n");
+                        str.AppendLine("__Example 2:__ Placing `Wild` > `Reverse` > `9 Blue`\nChanges the direction of the flow of the game and the last card placed becomes 9 Blue.\n");
+                        str.AppendLine("__Example 3:__ Placing `Wild` > `Plus 2` > `9 Blue`\nThe next player draws 2 cards and the last card placed becomes 9 Blue.\n");
+                        str.AppendLine("__Example 4:__ Placing `Wild` > `Plus 2` > `Skip` > `9 Blue`\nSkips one turn and makes the target player draw 2 cards with the last card placed becomes 9 Blue.\n");
+                        str.AppendLine("__Example 5:__ Placing `Wild` > `Plus 2` > `Reverse` > `9 Blue`\nReverse the game direction and makes the previous player draw 2 cards with the last card placed becomes 9 Blue.\n");
+                        str.AppendLine("__Example 6:__ Placing `Wild` > `Plus 2` > `Skip` > `9 Blue`\nReverse the game direction and makes the previous player draw 2 cards with the last card placed becomes 9 Blue.\n");
+                        str.AppendLine("__Example 7:__ Placing `Wild` > `Plus 2` > `Skip` > `Reverse` > `9 Blue`\nSkips a turn and reverses the direction, which brings it back to you and forces you to draw 2 cards with the last card placed becomes 9 Blue.\n");
+                        str.AppendLine("__Example 8:__ Placing `Wild` > `Plus 2` > `Reverse` > `Skip` > `9 Blue`\nReverses the direction and skips the previous player's turn, making the targeted player draw 2 cards with the last card placed becomes 9 Blue.\n");
+                        break;
+
+                    case "p4":
+                        str.AppendLine("*Explaining Plus 4 Cards*\n");
+                        str.AppendLine("You can place only one of the \"Plus 4\" card per turn.");
+                        str.AppendLine("It doesn't matter what the last placed card is when it's a plus 4 card that's going to be placed next.");
+                        str.AppendLine("You are allowed to place any number of `Skip`, `Reverse` and `Plus 2` cards.");
+                        str.AppendLine("The flow of the game gets affected by how the `Skip` and `Reverse`cards are positioned upon placement.");
+                        str.AppendLine("A Plus 4 card must end with one or multiple Numer Cards of the same label with same or different colors.\n");
+                        str.AppendLine("__Example 1:__ Placing `Plus 4` > `Skip` > `9 Blue`\nOne turn will be skipped and the target players draws 4 cards with the last card placed becomes 9 Blue.\n");
+                        str.AppendLine("__Example 2:__ Placing `Plus 4` > `Reverse` > `9 Blue`\nChanges the direction of the flow of the game and the previous player draws 4 cards with the last card placed becomes 9 Blue.\n");
+                        str.AppendLine("__Example 3:__ Placing `Plus 4` > `Plus 2` > `9 Blue`\nThe next player draws 6 cards and the last card placed becomes 9 Blue.\n");
+                        str.AppendLine("__Example 4:__ Placing `Plus 4` > `Plus 2` > `Skip` > `9 Blue`\nSkips one turn and makes the target player draw 6 cards with the last card placed becomes 9 Blue.\n");
+                        str.AppendLine("__Example 5:__ Placing `Plus 4` > `Plus 2` > `Reverse` > `9 Blue`\nReverse the game direction and makes the previous player draw 6 cards with the last card placed becomes 9 Blue.\n");
+                        str.AppendLine("__Example 6:__ Placing `Plus 4` > `Plus 2` > `Skip` > `9 Blue`\nReverse the game direction and makes the previous player draw 6 cards with the last card placed becomes 9 Blue.\n");
+                        str.AppendLine("__Example 7:__ Placing `Plus 4` > `Plus 2` > `Skip` > `Reverse` > `9 Blue`\nSkips a turn and reverses the direction, which brings it back to you and forces you to draw 6 cards with the last card placed becomes 9 Blue.\n");
+                        str.AppendLine("__Example 8:__ Placing `Plus 4` > `Plus 2` > `Reverse` > `Skip` > `9 Blue`\nReverses the direction and skips the previous player's turn, making the targeted player draw 6 cards with the last card placed becomes 9 Blue.\n");
+                        break;
+
+                    default:
+                        str.AppendLine("CardName can be in the following below:");
+                        str.AppendLine("```");
+                        str.AppendLine("n  — Number Card");
+                        str.AppendLine("r  — Reverse Card");
+                        str.AppendLine("s  — Skip Card");
+                        str.AppendLine("w  — Wild Card");
+                        str.AppendLine("p2 — Plus 2 Card");
+                        str.AppendLine("p4 — Plus 4 Card");
+                        str.AppendLine("```");
+                        break;
+                }
+            }
+
+            await Context.User.SendConfirmAsync(str.ToString());
         }
     }
 }

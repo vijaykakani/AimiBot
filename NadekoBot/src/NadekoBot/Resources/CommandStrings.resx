@@ -3126,4 +3126,10 @@
   <data name="currentcard_cmd" xml:space="preserve">
     <value>currentcard cc</value>
   </data>
+  <data name="cmds_cmd" xml:space="preserve">
+    <value>cmds</value>
+  </data>
+  <data name="rules_cmd" xml:space="preserve">
+    <value>rules</value>
+  </data>
 </root>
