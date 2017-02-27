@@ -98,6 +98,7 @@ namespace NadekoBot.Services.Impl
             public string OsuApiKey { get; set; } = "";
             public string SoundCloudClientId { get; set; } = "";
             public string CarbonKey { get; set; } = "";
+            public string CleverbotApiKey { get; set; } = "";
             public DBConfig Db { get; set; } = new DBConfig("sqlite", "Filename=./data/NadekoBot.db");
             public int TotalShards { get; set; } = 1;
         }

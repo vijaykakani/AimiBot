@@ -78,10 +78,10 @@ namespace NadekoBot.Modules.Games
 
                 await msg.Channel.TriggerTypingAsync().ConfigureAwait(false);
 
-                //  old code
+                //  old method
                 //var response = await cleverbot.Value.Think(message).ConfigureAwait(false);
 
-                //  new code (custom)
+                //  new method (custom)
                 var c_bot = new CleverbotCustom(msg);
                 var response = await c_bot.GetReply();
                 if (string.IsNullOrWhiteSpace(response)) throw new Exception("Cleverbot Failed");
