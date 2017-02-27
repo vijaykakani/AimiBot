@@ -11,6 +11,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using NadekoBot.Services.CleverBotApi;
 
 namespace NadekoBot.Modules.Games
 {
@@ -77,7 +78,14 @@ namespace NadekoBot.Modules.Games
 
                 await msg.Channel.TriggerTypingAsync().ConfigureAwait(false);
 
-                var response = await cleverbot.Value.Think(message).ConfigureAwait(false);
+                //  old code
+                //var response = await cleverbot.Value.Think(message).ConfigureAwait(false);
+
+                //  new code (custom)
+                var c_bot = new CleverbotCustom(msg);
+                var response = await c_bot.GetReply();
+                if (string.IsNullOrWhiteSpace(response)) throw new Exception("Cleverbot Failed");
+
                 try
                 {
                     await msg.Channel.SendConfirmAsync(response.SanitizeMentions()).ConfigureAwait(false);

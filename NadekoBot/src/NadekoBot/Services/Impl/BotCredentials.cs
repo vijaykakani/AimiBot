@@ -31,6 +31,8 @@ namespace NadekoBot.Services.Impl
         public int TotalShards { get; }
         public string CarbonKey { get; }
 
+        public string CleverbotApiKey { get; }
+
         public string credsFileName { get; } = Path.Combine(Directory.GetCurrentDirectory(), "credentials.json");
 
         public BotCredentials()
@@ -67,6 +69,7 @@ namespace NadekoBot.Services.Impl
 
                 SoundCloudClientId = data[nameof(SoundCloudClientId)];
                 CarbonKey = data[nameof(CarbonKey)];
+                CleverbotApiKey = data[nameof(CleverbotApiKey)];
                 var dbSection = data.GetSection("db");
                 Db = new DBConfig(string.IsNullOrWhiteSpace(dbSection["Type"]) 
                                 ? "sqlite" 
