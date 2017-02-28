@@ -808,7 +808,8 @@ namespace NadekoBot.Modules.Custom
                         error_message.AppendLine($"Message: {ex.Message}\nSource: Placing the first card\n");
                     }
 
-                    display_msg.AppendLine($"@everyone\n{Context.User.Mention} started Uno!\n");
+                    var user = Context.User as IGuildUser;
+                    display_msg.AppendLine($"@everyone\n{user.Nickname} started Uno!\n");
                     display_msg.AppendLine("Game paused.");
                     display_msg.Append($"Waiting for a minimum of `{GameChannel.Game().Config().MinimumPlayers} players` to join so the game can be played.");
                 }
@@ -888,13 +889,8 @@ namespace NadekoBot.Modules.Custom
                 if (Game.NoPlayers()) return;
 
                 UnoPlayer plr = Game.GetNextPlayer();
-                var mention = "";
-                if (plr.User() == Context.User)
-                    mention = "you";
-                else
-                    mention = plr.User().Mention;
-
-                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithDescription($"The next player is {mention}")).ConfigureAwait(false);
+                var u_plr = plr.User() as IGuildUser;
+                await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithDescription($"The next player is {u_plr.Nickname}")).ConfigureAwait(false);
             }
         }
 

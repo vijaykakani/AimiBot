@@ -75,8 +75,8 @@ namespace NadekoBot.Modules.Gambling
             
             Graphics g = Graphics.FromImage(backImg);
             g.DrawImage(mrkImg, 20, 60);
-            g.DrawString(user.Username.ToUpperInvariant(), new Font("Bitter", 20, FontStyle.Regular), Brushes.White, 30, 15);
-            g.DrawString(GetCurrency(user.Id).ToString(), new Font("Exo", 16, FontStyle.Regular), Brushes.Black, 215, 120);
+            g.DrawString(user.Username.ToUpperInvariant(), new Font("Bitter", 20, FontStyle.Regular), Brushes.White, 20, 12.5f);
+            g.DrawString(GetCurrency(user.Id).ToString(), new Font("Exo", 14, FontStyle.Regular), Brushes.Magenta, 215, 100);
 
             var g_id = Guid.NewGuid().ToString("N");
             var r_path = $"{root_folder}result_{g_id}.jpg";
