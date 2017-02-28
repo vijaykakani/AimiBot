@@ -8,6 +8,10 @@ using System.Threading.Tasks;
 using NadekoBot.Services;
 using NadekoBot.Services.Database.Models;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Net.Http;
+using System;
+using System.IO;
 
 namespace NadekoBot.Modules.Gambling
 {
@@ -50,8 +54,45 @@ namespace NadekoBot.Modules.Gambling
         public async Task Cash([Remainder] IUser user = null)
         {
             user = user ?? Context.User;
+            var guildUser = user as IGuildUser;
 
-            await Context.Channel.SendConfirmAsync($"{user.Username} has {GetCurrency(user.Id)} {CurrencySign}").ConfigureAwait(false);
+            var root_folder = "C:\\Users\\Ooha\\GitHub\\AimiBot\\NadekoBot\\src\\NadekoBot\\bin\\Release\\netcoreapp1.0\\data\\images/rank/";
+
+            var bakImgPath = $"{root_folder}bg.png";
+
+            System.Drawing.Image backImg = new Bitmap(bakImgPath);
+            System.Drawing.Image mrkImg = null;
+            try
+            {
+                HttpClient client = new HttpClient(); // Create HttpClient
+                byte[] buffer = await client.GetByteArrayAsync(user.AvatarUrl); // Download file
+                mrkImg = System.Drawing.Image.FromStream(new MemoryStream(buffer));
+            }
+            catch (Exception ex)
+            {
+                await Context.Channel.SendErrorAsync(ex.Message);
+            }
+            
+            Graphics g = Graphics.FromImage(backImg);
+            g.DrawImage(mrkImg, 20, 60);
+            g.DrawString(user.Username.ToUpperInvariant(), new Font("Bitter", 20, FontStyle.Regular), Brushes.White, 30, 15);
+            g.DrawString(GetCurrency(user.Id).ToString(), new Font("Exo", 16, FontStyle.Regular), Brushes.Black, 215, 120);
+
+            var g_id = Guid.NewGuid().ToString("N");
+            var r_path = $"{root_folder}result_{g_id}.jpg";
+            backImg.Save(r_path);
+            backImg.Dispose();
+
+            //  show the file
+            await Context.Channel.SendFileAsync(
+                                File.Open(r_path, FileMode.OpenOrCreate),
+                                new FileInfo(r_path).Name, $":information_source: {guildUser.Nickname}'s Money!")
+                                    .ConfigureAwait(false);
+
+            //  remove it once the upload is complete
+            File.Delete(r_path);
+
+            //await Context.Channel.SendConfirmAsync($"{user.Username} has {GetCurrency(user.Id)} {CurrencySign}").ConfigureAwait(false);
         }
 
         [NadekoCommand, Usage, Description, Aliases]
