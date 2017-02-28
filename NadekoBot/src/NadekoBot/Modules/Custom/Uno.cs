@@ -1805,7 +1805,7 @@ namespace NadekoBot.Modules.Custom
         [RequireContext(ContextType.Guild)]
         public async Task Hand()
         {
-            if (!UnoChannel.IsGameActive(Context.Channel))
+            if (!UnoChannel.DoesGameChannelExist(Context.Channel))
             {
                 await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno")
                     .WithDescription($"The game is inactive.")).ConfigureAwait(false);

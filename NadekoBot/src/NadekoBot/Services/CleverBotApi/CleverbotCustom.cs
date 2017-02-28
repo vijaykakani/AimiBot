@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using System.Net;
 using System.Net.Http;
 using Discord;
 using Discord.WebSocket;
-using NadekoBot.Extensions;
+using Newtonsoft.Json.Linq;
 
 namespace NadekoBot.Services.CleverBotApi
 {
@@ -33,12 +31,22 @@ namespace NadekoBot.Services.CleverBotApi
             var channel = _socketMessage.Channel as ITextChannel;
             var fullQueryLink = $"{_cleverBotDomain}getreply?key={NadekoBot.Credentials.CleverbotApiKey}" + 
                                 $"&input={Uri.EscapeUriString(_socketMessage.Content)}&cs={SessionIDs[channel.Guild.Id]}";
-            var reply = "";
 
             var httpClient = new HttpClient();
             HttpResponseMessage response = await httpClient.GetAsync(fullQueryLink);
             var contents = await response.Content.ReadAsStringAsync();
 
+            try
+            {
+                if (string.IsNullOrWhiteSpace(JObject.Parse(contents)["status"].ToString()))
+                    return "";
+            }
+            catch { }
+
+            SessionIDs[channel.Guild.Id] = JObject.Parse(contents)["cs"].ToString();
+            return JObject.Parse(contents)["output"].ToString();
+
+            /*  Old code for processing the information of "status", "cs" and "output"
             List<string> list = contents.Trim().Substring(0, contents.Length - 1).Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries).ToList();
             try
             {
@@ -64,9 +72,7 @@ namespace NadekoBot.Services.CleverBotApi
             catch (Exception ex)
             {
                 await channel.SendErrorAsync(ex.Message);
-            }
-
-            return reply;
+            }*/
         }
     }
 }
