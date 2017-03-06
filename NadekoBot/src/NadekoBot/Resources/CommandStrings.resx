@@ -3132,4 +3132,10 @@
   <data name="rules_cmd" xml:space="preserve">
     <value>rules</value>
   </data>
+  <data name="betcard_usage" xml:space="preserve">
+    <value>betcard bc</value>
+  </data>
+  <data name="currencydropamount_cmd" xml:space="preserve">
+    <value>currencydropamount cdaset</value>
+  </data>
 </root>
