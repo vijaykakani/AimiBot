@@ -1828,7 +1828,7 @@ namespace NadekoBot.Modules.Custom
             plr.Leave();
 
             //  remove the leaving player's bet
-            if (Game.IsBetActive() && (plr.Bet() > 0))
+            if (plr.Bet() > 0)
                 await CurrencyHandler.RemoveCurrencyAsync(plr.User(), "Uno Bet", plr.Bet(), false).ConfigureAwait(false);
 
             await Context.Channel.EmbedAsync(new EmbedBuilder().WithTitle("Uno").WithOkColor()

@@ -45,7 +45,7 @@ namespace NadekoBot.Modules.Settings
                         else
                         {
                             NadekoBot.BotConfig.CurrencyGenerationChance = val / 100;
-                            sb.AppendLine($":white_check_mark: **{cmdname}** has bee changed from `{CurrentVal}%` to `{val}%`");
+                            sb.AppendLine($":white_check_mark: **{cmdname}** has been changed from `{CurrentVal}%` to `{val}%`");
                         }
                     }
                 }
@@ -86,7 +86,7 @@ namespace NadekoBot.Modules.Settings
                         else
                         {
                             NadekoBot.BotConfig.CurrencyDropAmount = val;
-                            sb.AppendLine($":white_check_mark: **{cmdname}** has bee changed from `{CurrentVal}` to `{val}`");
+                            sb.AppendLine($":white_check_mark: **{cmdname}** has been changed from `{CurrentVal}` to `{val}`");
                         }
                     }
                 }
@@ -127,7 +127,7 @@ namespace NadekoBot.Modules.Settings
                         else
                         {
                             NadekoBot.BotConfig.HangmanCurrencyRewardAll = val;
-                            sb.AppendLine($":white_check_mark: **{cmdname}** has bee changed from `{CurrentVal}` to `{val}`");
+                            sb.AppendLine($":white_check_mark: **{cmdname}** has been changed from `{CurrentVal}` to `{val}`");
                         }
                     }
                 }
@@ -168,7 +168,7 @@ namespace NadekoBot.Modules.Settings
                         else
                         {
                             NadekoBot.BotConfig.HangmanCurrencyRewardLetter = val;
-                            sb.AppendLine($":white_check_mark: **{cmdname}** has bee changed from `{CurrentVal}` to `{val}`");
+                            sb.AppendLine($":white_check_mark: **{cmdname}** has been changed from `{CurrentVal}` to `{val}`");
                         }
                     }
                 }
@@ -209,7 +209,7 @@ namespace NadekoBot.Modules.Settings
                         else
                         {
                             NadekoBot.BotConfig.TypeStartCurrencyReward = val;
-                            sb.AppendLine($":white_check_mark: **{cmdname}** has bee changed from `{CurrentVal}` to `{val}`");
+                            sb.AppendLine($":white_check_mark: **{cmdname}** has been changed from `{CurrentVal}` to `{val}`");
                         }
                     }
                 }
@@ -250,7 +250,7 @@ namespace NadekoBot.Modules.Settings
                         else
                         {
                             NadekoBot.BotConfig.TriviaCurrencyReward = val;
-                            sb.AppendLine($":white_check_mark: **{cmdname}** has bee changed from `{CurrentVal}` to `{val}`");
+                            sb.AppendLine($":white_check_mark: **{cmdname}** has been changed from `{CurrentVal}` to `{val}`");
                         }
                     }
                 }
@@ -291,7 +291,7 @@ namespace NadekoBot.Modules.Settings
                         else
                         {
                             NadekoBot.BotConfig.TriviaCurrencyRewardMultiplier = val;
-                            sb.AppendLine($":white_check_mark: **{cmdname}** has bee changed from `{CurrentVal}` to `{val}`");
+                            sb.AppendLine($":white_check_mark: **{cmdname}** has been changed from `{CurrentVal}` to `{val}`");
                         }
                     }
                 }
