@@ -15,8 +15,6 @@ namespace NadekoBot.Modules.Settings
 
     public partial class Settings : DiscordModule
     {
-        public static Color SettingColor = new Color(1f, 1f, 0.47f);
-
         [NadekoCommand, Usage, Description, Aliases]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.Administrator)]
@@ -26,7 +24,8 @@ namespace NadekoBot.Modules.Settings
             channel = (ITextChannel)Context.Channel;
             var cmdname = "CurrencyGenerationChance";
             var sb = new StringBuilder();
-            
+            Color clr = new Color(1f, 1f, 0.47f);
+
             float CurrentVal = NadekoBot.BotConfig.CurrencyGenerationChance * 100;
 
             if (string.IsNullOrWhiteSpace(str))
@@ -55,48 +54,7 @@ namespace NadekoBot.Modules.Settings
                 }
             }
             
-            await channel.EmbedAsync(new EmbedBuilder().WithColor(SettingColor).WithDescription(sb.ToString())).ConfigureAwait(false);
-        }
-
-        [NadekoCommand, Usage, Description, Aliases]
-        [RequireContext(ContextType.Guild)]
-        [RequireUserPermission(GuildPermission.Administrator)]
-        [OwnerOnly]
-        public async Task CurrencyDropAmount(string str = null, [Remainder] ITextChannel channel = null)
-        {
-            channel = (ITextChannel)Context.Channel;
-            var cmdname = "CurrencyDropAmount";
-            var sb = new StringBuilder();
-
-            float CurrentVal = NadekoBot.BotConfig.CurrencyDropAmount;
-
-            if (string.IsNullOrWhiteSpace(str))
-                sb.AppendLine($":information_source: **{cmdname}** is currently set to `{CurrentVal}`");
-            else
-            {
-                int val = 0;
-                if (int.TryParse(str, out val))
-                {
-                    if (val < 0)
-                        sb.AppendLine($":anger: **{cmdname}** cannot accept values below `0`");
-                    else
-                    {
-                        if (val == CurrentVal)
-                            sb.AppendLine($":information_source: **{cmdname}** is already set to `{CurrentVal}`");
-                        else
-                        {
-                            NadekoBot.BotConfig.CurrencyDropAmount = val;
-                            sb.AppendLine($":white_check_mark: **{cmdname}** has bee changed from `{CurrentVal}` to `{val}`");
-                        }
-                    }
-                }
-                else
-                {
-                    sb.AppendLine($":anger: **{cmdname}** cannot accept text. Please input numbers instead.");
-                }
-            }
-
-            await channel.EmbedAsync(new EmbedBuilder().WithColor(SettingColor).WithDescription(sb.ToString())).ConfigureAwait(false);
+            await channel.EmbedAsync(new EmbedBuilder().WithColor(clr).WithDescription(sb.ToString())).ConfigureAwait(false);
         }
 
         [NadekoCommand, Usage, Description, Aliases]
@@ -108,6 +66,7 @@ namespace NadekoBot.Modules.Settings
             channel = (ITextChannel)Context.Channel;
             var cmdname = "HangmanCurrencyRewardAll";
             var sb = new StringBuilder();
+            Color clr = new Color(1f, 1f, 0.47f);
 
             int CurrentVal = NadekoBot.BotConfig.HangmanCurrencyRewardAll;
 
@@ -137,7 +96,7 @@ namespace NadekoBot.Modules.Settings
                 }
             }
 
-            await channel.EmbedAsync(new EmbedBuilder().WithColor(SettingColor).WithDescription(sb.ToString())).ConfigureAwait(false);
+            await channel.EmbedAsync(new EmbedBuilder().WithColor(clr).WithDescription(sb.ToString())).ConfigureAwait(false);
         }
 
         [NadekoCommand, Usage, Description, Aliases]
@@ -149,7 +108,8 @@ namespace NadekoBot.Modules.Settings
             channel = (ITextChannel)Context.Channel;
             var cmdname = "HangmanCurrencyRewardLetter";
             var sb = new StringBuilder();
-            
+            Color clr = new Color(1f, 1f, 0.47f);
+
             int CurrentVal = NadekoBot.BotConfig.HangmanCurrencyRewardLetter;
 
             if (string.IsNullOrWhiteSpace(str))
@@ -178,7 +138,7 @@ namespace NadekoBot.Modules.Settings
                 }
             }
 
-            await channel.EmbedAsync(new EmbedBuilder().WithColor(SettingColor).WithDescription(sb.ToString())).ConfigureAwait(false);
+            await channel.EmbedAsync(new EmbedBuilder().WithColor(clr).WithDescription(sb.ToString())).ConfigureAwait(false);
         }
 
         [NadekoCommand, Usage, Description, Aliases]
@@ -190,7 +150,8 @@ namespace NadekoBot.Modules.Settings
             channel = (ITextChannel)Context.Channel;
             var cmdname = "TypeStartCurrencyReward";
             var sb = new StringBuilder();
-            
+            Color clr = new Color(1f, 1f, 0.47f);
+
             int CurrentVal = NadekoBot.BotConfig.TypeStartCurrencyReward;
 
             if (string.IsNullOrWhiteSpace(str))
@@ -219,7 +180,7 @@ namespace NadekoBot.Modules.Settings
                 }
             }
 
-            await channel.EmbedAsync(new EmbedBuilder().WithColor(SettingColor).WithDescription(sb.ToString())).ConfigureAwait(false);
+            await channel.EmbedAsync(new EmbedBuilder().WithColor(clr).WithDescription(sb.ToString())).ConfigureAwait(false);
         }
 
         [NadekoCommand, Usage, Description, Aliases]
@@ -231,7 +192,8 @@ namespace NadekoBot.Modules.Settings
             channel = (ITextChannel)Context.Channel;
             var cmdname = "TriviaCurrencyReward";
             var sb = new StringBuilder();
-            
+            Color clr = new Color(1f, 1f, 0.47f);
+
             int CurrentVal = NadekoBot.BotConfig.TriviaCurrencyReward;
 
             if (string.IsNullOrWhiteSpace(str))
@@ -260,7 +222,7 @@ namespace NadekoBot.Modules.Settings
                 }
             }
 
-            await channel.EmbedAsync(new EmbedBuilder().WithColor(SettingColor).WithDescription(sb.ToString())).ConfigureAwait(false);
+            await channel.EmbedAsync(new EmbedBuilder().WithColor(clr).WithDescription(sb.ToString())).ConfigureAwait(false);
         }
 
         [NadekoCommand, Usage, Description, Aliases]
@@ -272,7 +234,8 @@ namespace NadekoBot.Modules.Settings
             channel = (ITextChannel)Context.Channel;
             var cmdname = "TriviaCurrencyRewardMultiplier";
             var sb = new StringBuilder();
-            
+            Color clr = new Color(1f, 1f, 0.47f);
+
             int CurrentVal = NadekoBot.BotConfig.TriviaCurrencyRewardMultiplier;
 
             if (string.IsNullOrWhiteSpace(str))
@@ -301,7 +264,7 @@ namespace NadekoBot.Modules.Settings
                 }
             }
 
-            await channel.EmbedAsync(new EmbedBuilder().WithColor(SettingColor).WithDescription(sb.ToString())).ConfigureAwait(false);
+            await channel.EmbedAsync(new EmbedBuilder().WithColor(clr).WithDescription(sb.ToString())).ConfigureAwait(false);
         }
     }
 }

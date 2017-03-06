@@ -35,8 +35,6 @@ namespace NadekoBot.Modules.Custom
         public int MinimumBetAmount { get; set; } = 20;
         public int MaximumBetAmount { get; set; } = 500;
         public int BetMultiplier { get; set; } = 2;
-        public float BetPercentageWinner { get; set; } = 0.7f;
-        public float BetPercentageLoser { get; set; } = 0.3f;
 
         public int CardsPerPlayer { get; set; } = 7;
     }
@@ -1587,33 +1585,51 @@ namespace NadekoBot.Modules.Custom
                     {
                         //  for only two players, the winner takes all
                         //  combination of the bet made by both players and the first player takes it
-                        
-
-                        //  combining bets of all players
-                        var total_bet_amount = 0;
-                        foreach (var s_plr in Game.Players())
+                        if ((Game.Players().Count() == 2))
                         {
-                            total_bet_amount += s_plr.Bet();
-                            await CurrencyHandler.RemoveCurrencyAsync(s_plr.User(), "Uno Bet", s_plr.Bet(), false).ConfigureAwait(false);
+                            UnoPlayer plr_lose = null;
+                            foreach (var s_plr in Game.Players())
+                            {
+                                if (s_plr != plr)
+                                {
+                                    plr_lose = s_plr;
+                                    break;
+                                }
+                            }
+
+                            var total_bet_amount = plr.Bet() + plr_lose.Bet();
+
+                            await CurrencyHandler.AddCurrencyAsync(plr.User(), "Uno Bet", total_bet_amount, false).ConfigureAwait(false);
+                            display_msg.AppendLine($"{plr.User().Mention} received {total_bet_amount}{NadekoBot.BotConfig.CurrencySign}");
+
+                            await CurrencyHandler.RemoveCurrencyAsync(plr_lose.User(), "Uno Bet", plr_lose.Bet(), false).ConfigureAwait(false);
+                            await plr_lose.User().SendMessageAsync($":frowning: You lost the bet. Better luck next time.").ConfigureAwait(false);
                         }
-
-                        //  divide them into winner and loser awards
-                        var winner_award = (int)Math.Round(total_bet_amount * Game.Config().BetPercentageWinner);
-                        var loser_award = (int)Math.Round((total_bet_amount * Game.Config().BetPercentageLoser) / (Game.Players().Count() - 1));
-
-                        var s_plr_user = plr as IGuildUser;
-                        
-                        //  award the winner
-                        await CurrencyHandler.AddCurrencyAsync(plr.User(), "Winning Uno", winner_award, false).ConfigureAwait(false);
-                        display_msg.AppendLine($"{s_plr_user.Nickname} received {winner_award} {NadekoBot.BotConfig.CurrencySign}");
-
-                        foreach (var s_plr in Game.Players())
+                        else if (Game.Players().Count() >= 4)
                         {
-                            if (s_plr == plr) return;
+                            var plr_1 = Game.Players()[0];
+                            var plr_2 = Game.Players()[1];
+                            var plr_3 = Game.Players()[2];
+                            var plr_4 = Game.Players()[3];
 
-                            var s_user = s_plr as IGuildUser;
-                            await CurrencyHandler.AddCurrencyAsync(plr.User(), "Playing Uno", loser_award, false).ConfigureAwait(false);
-                            display_msg.AppendLine($"{s_user.Nickname} received {loser_award} {NadekoBot.BotConfig.CurrencySign}");
+                            //  combining the 3rd and 4th players
+                            var total_bet_amount = plr_3.Bet() + plr_4.Bet();
+
+                            var plr_1_award = (int)Math.Round(total_bet_amount * 0.7);
+                            var plr_2_award = (int)Math.Round(total_bet_amount * 0.3);
+
+                            await CurrencyHandler.AddCurrencyAsync(plr_1.User(), "Uno Bet", plr_1_award, false).ConfigureAwait(false);
+                            await CurrencyHandler.AddCurrencyAsync(plr_2.User(), "Uno Bet", plr_2_award, false).ConfigureAwait(false);
+
+                            display_msg.AppendLine($"{plr_1.User().Mention} received {total_bet_amount * 0.7}{NadekoBot.BotConfig.CurrencySign}");
+                            display_msg.AppendLine($"{plr_2.User().Mention} received {total_bet_amount * 0.3}{NadekoBot.BotConfig.CurrencySign}");
+
+                            //  make the people from 3rd player lose their bets
+                            for(var i = 2; i < Game.Players().Count(); i++)
+                            {
+                                var s_plr = Game.Players()[i];
+                                await s_plr.User().SendMessageAsync($":frowning: You lost the bet. Better luck next time.").ConfigureAwait(false);
+                            }
                         }
 
                         /*  Old code for betting for only the first to win while others lose

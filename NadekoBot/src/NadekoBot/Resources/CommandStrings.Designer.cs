@@ -888,15 +888,6 @@ namespace NadekoBot.Resources {
         }
         
         /// <summary>
-        ///    Looks up a localized string similar to betcard bc.
-        /// </summary>
-        public static string betcard_usage {
-            get {
-                return ResourceManager.GetString("betcard_usage", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///    Looks up a localized string similar to betflip bf.
         /// </summary>
         public static string betflip_cmd {
@@ -2180,15 +2171,6 @@ namespace NadekoBot.Resources {
         public static string crstatsclear_usage {
             get {
                 return ResourceManager.GetString("crstatsclear_usage", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///    Looks up a localized string similar to currencydropamount cdaset.
-        /// </summary>
-        public static string currencydropamount_cmd {
-            get {
-                return ResourceManager.GetString("currencydropamount_cmd", resourceCulture);
             }
         }
         
